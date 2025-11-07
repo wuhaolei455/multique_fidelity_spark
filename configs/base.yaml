@@ -41,4 +41,4 @@ method_args:
 # Config spaces
 config_spaces:
   config_space: configs/space/huge_space.json
-  expert_space: configs/space/expert_space.json
+  expert_space: configs/space/

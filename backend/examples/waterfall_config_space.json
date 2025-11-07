@@ -1,0 +1,156 @@
+{
+  "name": "waterfall-component-optimized",
+  "description": "瀑布流组件配置空间 - 针对图片流展示的性能优化配置，包含布局、渲染、加载、缓存、动画等核心参数",
+  "space": {
+    "waterfall.columnCount": {
+      "type": "integer",
+      "min": 2,
+      "max": 6,
+      "default": 3
+    },
+    "waterfall.columnGap": {
+      "type": "integer",
+      "min": 8,
+      "max": 32,
+      "default": 16
+    },
+    "waterfall.rowGap": {
+      "type": "integer",
+      "min": 8,
+      "max": 32,
+      "default": 16
+    },
+    "waterfall.itemsPerLoad": {
+      "type": "integer",
+      "min": 10,
+      "max": 50,
+      "default": 20
+    },
+    "waterfall.lazyLoadThreshold": {
+      "type": "integer",
+      "min": 200,
+      "max": 1000,
+      "default": 500
+    },
+    "waterfall.preloadCount": {
+      "type": "integer",
+      "min": 3,
+      "max": 15,
+      "default": 5
+    },
+    "waterfall.imageQuality": {
+      "type": "float",
+      "min": 0.6,
+      "max": 1.0,
+      "default": 0.85
+    },
+    "waterfall.thumbnailQuality": {
+      "type": "float",
+      "min": 0.3,
+      "max": 0.7,
+      "default": 0.5
+    },
+    "waterfall.maxImageWidth": {
+      "type": "integer",
+      "min": 400,
+      "max": 1200,
+      "default": 800
+    },
+    "waterfall.maxImageHeight": {
+      "type": "integer",
+      "min": 400,
+      "max": 2000,
+      "default": 1200
+    },
+    "waterfall.animationDuration": {
+      "type": "integer",
+      "min": 150,
+      "max": 600,
+      "default": 300
+    },
+    "waterfall.animationDelay": {
+      "type": "integer",
+      "min": 0,
+      "max": 100,
+      "default": 50
+    },
+    "waterfall.cacheSize": {
+      "type": "integer",
+      "min": 50,
+      "max": 300,
+      "default": 100
+    },
+    "waterfall.renderBatchSize": {
+      "type": "integer",
+      "min": 5,
+      "max": 30,
+      "default": 10
+    },
+    "waterfall.renderDelay": {
+      "type": "integer",
+      "min": 0,
+      "max": 100,
+      "default": 16
+    },
+    "waterfall.scrollThrottleDelay": {
+      "type": "integer",
+      "min": 50,
+      "max": 300,
+      "default": 100
+    },
+    "waterfall.resizeDebounceDelay": {
+      "type": "integer",
+      "min": 100,
+      "max": 500,
+      "default": 200
+    },
+    "waterfall.minColumnWidth": {
+      "type": "integer",
+      "min": 200,
+      "max": 400,
+      "default": 280
+    },
+    "waterfall.maxConcurrentLoads": {
+      "type": "integer",
+      "min": 3,
+      "max": 10,
+      "default": 6
+    },
+    "waterfall.retryAttempts": {
+      "type": "integer",
+      "min": 1,
+      "max": 5,
+      "default": 3
+    },
+    "waterfall.retryDelay": {
+      "type": "integer",
+      "min": 500,
+      "max": 3000,
+      "default": 1000
+    },
+    "waterfall.placeholderColor": {
+      "type": "integer",
+      "min": 200,
+      "max": 255,
+      "default": 240
+    },
+    "waterfall.imageLoadTimeout": {
+      "type": "integer",
+      "min": 5000,
+      "max": 30000,
+      "default": 15000
+    },
+    "waterfall.virtualScrollBuffer": {
+      "type": "integer",
+      "min": 500,
+      "max": 2000,
+      "default": 1000
+    },
+    "waterfall.rebalanceThreshold": {
+      "type": "float",
+      "min": 0.1,
+      "max": 0.5,
+      "default": 0.2
+    }
+  }
+}
