@@ -40,6 +40,7 @@ class ConfigManager:
         parser.add_argument('--test_mode', action='store_true', default=False)
         parser.add_argument('--debug', action='store_true', default=False)
         parser.add_argument('--resume', type=str, default=None)
+        parser.add_argument('--space', type=str)
         
         return parser.parse_args()
 
@@ -103,6 +104,7 @@ class ConfigManager:
             'tl_topk': ['method_args', 'tl_args', 'topk'],
             'cp_topk': ['method_args', 'cp_args', 'topk'],
             'compress': ['method_args', 'cp_args', 'strategy'],
+            'space': ['config_spaces', 'config_space']
         }
         
         if key in PARAM_MAPPINGS:

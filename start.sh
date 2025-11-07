@@ -1,18 +1,26 @@
 #!/bin/bash
 
-# 框架启动脚本
-# 用于启动多保真度 Spark 调优框架
+# 瀑布流组件调优启动脚本
+# 使用 waterfall-component-optimized.json 配置空间进行参数调优
+
+echo "=========================================="
+echo "🚀 启动瀑布流组件调优任务"
+echo "=========================================="
+echo ""
+echo "📦 配置空间: waterfall-component-optimized.json"
+echo "🎯 调优目标: 优化瀑布流组件性能"
+echo "📊 参数数量: 25 个"
+echo ""
+echo "=========================================="
 
 python main.py \
+    --config configs/waterfall.yaml \
     --test_mode \
-    --opt BOHB_GP \
-    --log_level debug \
-    --compress shap \
-    --transfer reacq \
-    --warm_start best_all \
-    --task TEST \
-    --target idx0 \
-    --save_dir results \
-    --iter_num 10 \
-    --history_dir mock/history
+    --iter_num 10
+
+echo ""
+echo "=========================================="
+echo "✅ 调优任务完成！"
+echo "📁 结果保存在: results/waterfall_results/"
+echo "=========================================="
 

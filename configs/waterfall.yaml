@@ -9,7 +9,7 @@ similarity_threshold: 0.5
 paths:
   log_dir: log
   data_dir: mock/data
-  history_dir: mock/history
+  history_dir: notexist
   target: tpcds_100g
   save_dir: results
 
@@ -40,5 +40,5 @@ method_args:
 
 # Config spaces
 config_spaces:
-  config_space: configs/space/huge_space.json
+  config_space: configs/space/waterfall-component-optimized.json
   expert_space: configs/space/expert_space.json
