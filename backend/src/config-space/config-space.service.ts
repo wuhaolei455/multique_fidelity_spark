@@ -13,13 +13,6 @@ import {
 } from './dto/config-space.dto';
 import { PaginatedResponse } from '../common/types/base.types';
 
-interface ConfigSpaceFile {
-  name?: string;
-  description?: string;
-  space: ConfigSpaceJson;
-  spark?: string[]; // for expert_space.json format
-}
-
 @Injectable()
 export class ConfigSpaceService implements IConfigSpaceService {
   private readonly configSpaceDir: string;
@@ -36,41 +29,27 @@ export class ConfigSpaceService implements IConfigSpaceService {
   }
 
   async create(createDto: CreateConfigSpaceDto): Promise<ConfigSpaceResponseDto> {
-    let space: ConfigSpaceJson;
-
-    // 如果用户没有提供space，使用默认配置空间
-    if (!createDto.space) {
-      space = await this.loadDefaultConfigSpace();
-    } else {
-      space = createDto.space;
-    }
+    const { name, description, space } = createDto;
 
     // 验证配置空间格式
     this.validateConfigSpaceFormat(space);
 
     // 检查是否已存在同名配置空间
-    const fileName = `${createDto.name}.json`;
+    const fileName = `${name}.json`;
     const filePath = path.join(this.configSpaceDir, fileName);
     if (fs.existsSync(filePath)) {
-      throw new BadRequestException(`Config space with name '${createDto.name}' already exists`);
+      throw new BadRequestException(`Config space with name '${name}' already exists`);
     }
 
-    // 构造要保存的JSON对象（简化格式，不包含元数据）
-    const configSpaceFile: ConfigSpaceFile = {
-      name: createDto.name,
-      description: createDto.description,
-      space,
-    };
-
-    // 直接保存到 configs/space 目录
-    fs.writeFileSync(filePath, JSON.stringify(configSpaceFile, null, 2), 'utf-8');
+    // 直接保存参数定义到 configs/space 目录（简化格式）
+    fs.writeFileSync(filePath, JSON.stringify(space, null, 2), 'utf-8');
 
     // 返回响应
     const stats = fs.statSync(filePath);
     return {
-      id: createDto.name, // 使用名称作为ID
-      name: createDto.name,
-      description: createDto.description,
+      id: name, // 使用名称作为ID
+      name,
+      description,
       space,
       isPreset: false,
       parameterCount: Object.keys(space).length,
@@ -152,20 +131,14 @@ export class ConfigSpaceService implements IConfigSpaceService {
       throw new NotFoundException(`Config space with id ${id} not found`);
     }
 
-    // 读取现有文件
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const configFile = JSON.parse(content) as ConfigSpaceFile;
+    // 读取现有配置空间
+    const existing = await this.loadConfigSpaceFromFile(filePath, id);
+    let space = existing.space;
 
-    // 更新字段
-    if (updateDto.name !== undefined) {
-      configFile.name = updateDto.name;
-    }
-    if (updateDto.description !== undefined) {
-      configFile.description = updateDto.description;
-    }
+    // 更新 space
     if (updateDto.space !== undefined) {
       this.validateConfigSpaceFormat(updateDto.space);
-      configFile.space = updateDto.space;
+      space = updateDto.space;
     }
 
     // 如果名称改变了，需要重命名文件
@@ -177,16 +150,16 @@ export class ConfigSpaceService implements IConfigSpaceService {
         throw new BadRequestException(`Config space with name '${updateDto.name}' already exists`);
       }
       
-      // 保存到新文件
-      fs.writeFileSync(newFilePath, JSON.stringify(configFile, null, 2), 'utf-8');
+      // 保存到新文件（简化格式，直接保存参数定义）
+      fs.writeFileSync(newFilePath, JSON.stringify(space, null, 2), 'utf-8');
       // 删除旧文件
       fs.unlinkSync(filePath);
       
       // 返回新的配置空间
       return await this.loadConfigSpaceFromFile(newFilePath, updateDto.name);
     } else {
-      // 保存到原文件
-      fs.writeFileSync(filePath, JSON.stringify(configFile, null, 2), 'utf-8');
+      // 保存到原文件（简化格式，直接保存参数定义）
+      fs.writeFileSync(filePath, JSON.stringify(space, null, 2), 'utf-8');
       return await this.loadConfigSpaceFromFile(filePath, id);
     }
   }
@@ -272,14 +245,23 @@ export class ConfigSpaceService implements IConfigSpaceService {
       throw new NotFoundException(`File not found: ${filePath}`);
     }
     const content = fs.readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(content) as ConfigSpaceFile;
+    const data = JSON.parse(content);
     
-    // 处理 expert_space.json 的特殊格式
+    let space: ConfigSpaceJson;
+    
+    // 处理 expert_space.json 的特殊格式（兼容旧格式）
     if (data.spark && Array.isArray(data.spark)) {
-      return await this.loadExpertSpaceFromArray(data.spark);
+      space = await this.loadExpertSpaceFromArray(data.spark);
+    }
+    // 处理旧的标准格式（包含 space 字段）- 兼容性保留
+    else if (data.space && typeof data.space === 'object') {
+      space = data.space;
+    }
+    // 简化格式（直接是参数定义）- 新的默认格式
+    else {
+      space = data as ConfigSpaceJson;
     }
     
-    const space = data.space || (data as any as ConfigSpaceJson);
     this.validateConfigSpaceFormat(space);
     return space;
   }
@@ -327,21 +309,29 @@ export class ConfigSpaceService implements IConfigSpaceService {
     id: string,
   ): Promise<ConfigSpaceResponseDto> {
     const content = fs.readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(content) as ConfigSpaceFile;
+    const data = JSON.parse(content);
     
     let space: ConfigSpaceJson;
-    let name: string;
+    let name: string = id;
     let description: string | undefined;
     
-    // 处理 expert_space.json 的特殊格式
+    // 处理 expert_space.json 的特殊格式（兼容旧格式）
     if (data.spark && Array.isArray(data.spark)) {
       space = await this.loadExpertSpaceFromArray(data.spark);
       name = data.name || id;
       description = data.description || `Expert config space with ${data.spark.length} parameters`;
-    } else {
-      space = data.space || (data as any);
+    } 
+    // 处理旧的标准格式（包含 name 和 space 字段）- 兼容性保留
+    else if (data.space && typeof data.space === 'object') {
+      space = data.space;
       name = data.name || id;
       description = data.description;
+    }
+    // 简化格式（直接是参数定义）- 新的默认格式
+    else {
+      space = data as ConfigSpaceJson;
+      name = id;
+      description = undefined;
     }
 
     // 获取文件元数据

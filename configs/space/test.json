@@ -1,0 +1,14 @@
+{
+  "waterfall.columnCount": {
+    "type": "integer",
+    "min": 2,
+    "max": 6,
+    "default": 3
+  },
+  "test": {
+    "type": "float",
+    "min": 0,
+    "max": 100,
+    "default": 50
+  }
+}

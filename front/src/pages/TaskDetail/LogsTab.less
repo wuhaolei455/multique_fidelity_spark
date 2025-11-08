@@ -1,0 +1,37 @@
+.logs-tab {
+  .log-container {
+    background: #000;
+    color: #fff;
+    padding: 16px;
+    border-radius: 4px;
+    max-height: 600px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+
+    .log-empty {
+      text-align: center;
+      color: #666;
+      padding: 40px 0;
+    }
+
+    .log-entry {
+      margin-bottom: 4px;
+
+      .log-timestamp {
+        color: #888;
+        margin-right: 8px;
+      }
+
+      .log-level {
+        margin-right: 8px;
+      }
+
+      .log-message {
+        word-break: break-all;
+      }
+    }
+  }
+}
+

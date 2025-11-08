@@ -42,6 +42,8 @@ export class ResultService implements IResultService {
       metaInfo: taskResult.meta_info,
       globalStartTime: taskResult.global_start_time || this.getTaskCreatedAt(taskResult).toISOString(),
       observationCount: taskResult.observations.length,
+      bestObjective: this.calculateBestObjective(taskResult.observations),
+      averageObjective: this.calculateAverageObjective(taskResult.observations),
     };
   }
 
@@ -332,6 +334,25 @@ export class ResultService implements IResultService {
               const bestObjective = this.calculateBestObjective(data.observations || []);
               const averageObjective = this.calculateAverageObjective(data.observations || []);
               
+              // 找到最佳配置
+              let bestConfig = null;
+              if (data.observations && data.observations.length > 0) {
+                let bestIndex = 0;
+                let minObjective = data.observations[0].objectives[0];
+                
+                data.observations.forEach((obs, index) => {
+                  if (obs.objectives[0] < minObjective) {
+                    minObjective = obs.objectives[0];
+                    bestIndex = index;
+                  }
+                });
+                
+                bestConfig = {
+                  config: data.observations[bestIndex].config,
+                  bestObjective: minObjective,
+                };
+              }
+              
                  results.push({
                    taskId: data.task_id,
                    fileName: item,
@@ -349,6 +370,7 @@ export class ResultService implements IResultService {
                      : stat.mtime.toISOString(),
                    meta_info: data.meta_info,
                    observations: data.observations || [],
+                   bestConfig,  // 添加最佳配置
                  });
             }
           } catch (error) {

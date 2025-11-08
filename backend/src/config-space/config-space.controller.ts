@@ -29,7 +29,10 @@ export class ConfigSpaceController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建配置空间' })
+  @ApiOperation({ 
+    summary: '创建配置空间',
+    description: '使用简化格式创建配置空间。请求体格式：{ "name": "配置名称", "description": "描述（可选）", "space": { 参数定义对象 } }'
+  })
   @ApiResponse({
     status: 201,
     description: '配置空间创建成功',

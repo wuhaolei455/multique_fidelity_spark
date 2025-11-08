@@ -43,7 +43,7 @@ export class ResultController {
        @ApiOperation({ summary: '获取所有结果列表' })
        @ApiResponse({
          status: 200,
-         description: '返回所有结果的详细信息列表，包括完整的 meta_info 和 observations',
+         description: '返回所有结果的详细信息列表，包括完整的 meta_info、observations 和 bestConfig',
          schema: {
            type: 'array',
            items: {
@@ -77,6 +77,14 @@ export class ResultController {
                      create_time: { type: 'string', description: '创建时间' },
                      extra_info: { type: 'object', description: '额外信息' },
                    },
+                 },
+               },
+               bestConfig: {
+                 type: 'object',
+                 description: '最佳配置信息',
+                 properties: {
+                   config: { type: 'object', description: '最佳配置参数' },
+                   bestObjective: { type: 'number', description: '最佳目标值' },
                  },
                },
              },

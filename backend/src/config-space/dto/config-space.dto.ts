@@ -40,7 +40,10 @@ export interface ConfigSpaceDefinition {
 }
 
 export class CreateConfigSpaceDto {
-  @ApiProperty({ description: '配置空间名称' })
+  @ApiProperty({
+    description: '配置空间名称',
+    example: 'my_config_space'
+  })
   @IsString()
   name: string;
 
@@ -49,8 +52,8 @@ export class CreateConfigSpaceDto {
   @IsOptional()
   description?: string;
 
-  @ApiPropertyOptional({
-    description: '配置空间定义（JSON格式），如果不提供则使用默认配置空间',
+  @ApiProperty({
+    description: '配置参数定义对象（简化格式）',
     type: 'object',
     additionalProperties: {
       type: 'object',
@@ -61,15 +64,23 @@ export class CreateConfigSpaceDto {
         default: { type: 'number' },
       },
     },
+    example: {
+      'spark.executor.memory': {
+        type: 'integer',
+        min: 1024,
+        max: 8192,
+        default: 2048
+      },
+      'spark.executor.cores': {
+        type: 'integer',
+        min: 1,
+        max: 16,
+        default: 4
+      }
+    }
   })
   @IsObject()
-  @IsOptional()
-  space?: ConfigSpaceJson;
-
-  @ApiPropertyOptional({ description: '是否为预设配置空间' })
-  @IsBoolean()
-  @IsOptional()
-  isPreset?: boolean;
+  space: ConfigSpaceJson;
 }
 
 export class UpdateConfigSpaceDto {

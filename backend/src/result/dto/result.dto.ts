@@ -93,6 +93,12 @@ export class TaskResultResponseDto {
   @ApiProperty({ description: '观察记录总数' })
   observationCount: number;
 
+  @ApiProperty({ description: '最佳目标值' })
+  bestObjective: number;
+
+  @ApiProperty({ description: '平均目标值' })
+  averageObjective: number;
+
   @ApiPropertyOptional({ description: '最佳配置' })
   bestConfig?: BestConfigResponseDto;
 }
