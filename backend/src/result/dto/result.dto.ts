@@ -249,3 +249,71 @@ export class CompareTasksResponseDto {
   bestTaskId: string;
 }
 
+export class CreateTaskDto {
+  @ApiProperty({ description: '任务名称' })
+  @IsString()
+  name: string;
+
+  @ApiPropertyOptional({ description: '任务描述' })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiProperty({ description: '优化方法' })
+  @IsString()
+  method: string;
+
+  @ApiProperty({ description: '配置空间名称' })
+  @IsString()
+  configSpace: string;
+
+  @ApiProperty({ description: '迭代次数' })
+  @IsNumber()
+  @Min(1)
+  iterNum: number;
+
+  @ApiProperty({ description: '初始样本数' })
+  @IsNumber()
+  @Min(1)
+  initNum: number;
+
+  @ApiProperty({ description: 'Warm Start策略' })
+  @IsString()
+  warmStartStrategy: string;
+
+  @ApiProperty({ description: 'Transfer Learning策略' })
+  @IsString()
+  transferLearningStrategy: string;
+
+  @ApiProperty({ description: '压缩策略' })
+  @IsString()
+  compressionStrategy: string;
+
+  @ApiPropertyOptional({ description: '调度器参数' })
+  @IsObject()
+  @IsOptional()
+  schedulerParams?: {
+    R?: number;
+    eta?: number;
+  };
+
+  @ApiProperty({ description: '环境配置' })
+  @IsObject()
+  environment: {
+    database: string;
+    sqlDirectory: string;
+    clusterConfig: string;
+  };
+}
+
+export class CreateTaskResponseDto {
+  @ApiProperty({ description: '任务ID' })
+  taskId: string;
+
+  @ApiProperty({ description: '创建时间' })
+  createdAt: string;
+
+  @ApiProperty({ description: '状态' })
+  status: string;
+}
+

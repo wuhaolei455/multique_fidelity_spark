@@ -13,6 +13,8 @@ import {
   CompareTasksDto,
   CompareTasksResponseDto,
   Config,
+  CreateTaskDto,
+  CreateTaskResponseDto,
 } from './dto/result.dto';
 import { PaginatedResponse } from '../common/types/base.types';
 
@@ -214,6 +216,69 @@ export class ResultService implements IResultService {
     return {
       parameters: sortedParams,
       method: 'correlation',
+    };
+  }
+
+  async createTask(createDto: CreateTaskDto): Promise<CreateTaskResponseDto> {
+    // 生成任务ID
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const taskId = `${createDto.name}_${createDto.method}_${timestamp}`;
+    
+    // 创建任务配置
+    const taskConfig = {
+      name: createDto.name,
+      description: createDto.description,
+      method: createDto.method,
+      config_space: createDto.configSpace,
+      iter_num: createDto.iterNum,
+      init_num: createDto.initNum,
+      warm_start_strategy: createDto.warmStartStrategy,
+      transfer_learning_strategy: createDto.transferLearningStrategy,
+      compression_strategy: createDto.compressionStrategy,
+      scheduler_params: createDto.schedulerParams,
+      environment: createDto.environment,
+    };
+
+    // 创建任务目录
+    const taskDir = path.join(this.resultsDir, taskId);
+    if (!fs.existsSync(taskDir)) {
+      fs.mkdirSync(taskDir, { recursive: true });
+    }
+
+    // 保存任务配置
+    const configPath = path.join(taskDir, 'task_config.json');
+    fs.writeFileSync(configPath, JSON.stringify(taskConfig, null, 2), 'utf-8');
+
+    // 创建初始任务状态文件
+    const initialTaskResult: TaskResult = {
+      task_id: taskId,
+      num_objectives: 1,
+      num_constraints: 0,
+      ref_point: null,
+      meta_info: {
+        meta_feature: [],
+        random: {
+          seed: 42,
+          rand_prob: 0.0,
+          rand_mode: 'none',
+        },
+        space: {
+          original: {
+            hyperparameters: [],
+          },
+        },
+      },
+      global_start_time: new Date().toISOString(),
+      observations: [],
+    };
+
+    const resultPath = path.join(taskDir, `${taskId}.json`);
+    fs.writeFileSync(resultPath, JSON.stringify(initialTaskResult, null, 2), 'utf-8');
+
+    return {
+      taskId,
+      createdAt: new Date().toISOString(),
+      status: 'pending',
     };
   }
 

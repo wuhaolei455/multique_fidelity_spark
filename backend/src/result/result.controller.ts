@@ -19,6 +19,8 @@ import {
   ParameterImportanceResponseDto,
   CompareTasksDto,
   CompareTasksResponseDto,
+  CreateTaskDto,
+  CreateTaskResponseDto,
 } from './dto/result.dto';
 import { PaginatedResponse } from '../common/types/base.types';
 
@@ -26,6 +28,18 @@ import { PaginatedResponse } from '../common/types/base.types';
 @Controller('api/results')
 export class ResultController {
   constructor(private readonly resultService: ResultService) {}
+
+  @Post('create')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: '创建新任务' })
+  @ApiResponse({
+    status: 201,
+    description: '任务创建成功',
+    type: CreateTaskResponseDto,
+  })
+  async createTask(@Body() createDto: CreateTaskDto): Promise<CreateTaskResponseDto> {
+    return this.resultService.createTask(createDto);
+  }
 
   @Post('compare')
   @HttpCode(HttpStatus.OK)

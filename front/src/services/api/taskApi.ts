@@ -65,7 +65,7 @@ export const getTaskDetail = (taskId: string): Promise<TaskResult> => {
     });
 };
 
-// 创建任务
+// 创建任务（旧接口，已废弃）
 export const createTask = (data: TaskCreateRequest): Promise<{ taskId: string; createdAt: string; status: string }> => {
   return request({
     url: '/results/create',
@@ -82,6 +82,36 @@ export const createTask = (data: TaskCreateRequest): Promise<{ taskId: string; c
       compressionStrategy: data.config.compression_strategy,
       schedulerParams: data.config.scheduler_params,
       environment: data.config.environment,
+    },
+  });
+};
+
+// 创建任务（新接口，支持上传脚本）
+export const createTaskWithScript = (data: {
+  name: string;
+  description?: string;
+  configSpace: string;
+  evaluatorScript: string;
+  configSpaceFileName?: string;
+  scriptFileName?: string;
+}): Promise<{
+  taskId: string;
+  createdAt: string;
+  status: string;
+  configSpacePath: string;
+  scriptPath: string;
+  processId?: number;
+}> => {
+  return request({
+    url: '/tasks/create',
+    method: 'POST',
+    data: {
+      name: data.name,
+      description: data.description,
+      configSpace: data.configSpace,
+      evaluatorScript: data.evaluatorScript,
+      configSpaceFileName: data.configSpaceFileName,
+      scriptFileName: data.scriptFileName,
     },
   });
 };
