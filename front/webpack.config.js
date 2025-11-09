@@ -3,6 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
@@ -71,6 +72,12 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './public/index.html',
         favicon: './public/favicon.ico',
+      }),
+      new webpack.DefinePlugin({
+        'process.env': JSON.stringify({
+          REACT_APP_API_URL: process.env.REACT_APP_API_URL || 'http://localhost:3000',
+          NODE_ENV: argv.mode || 'development',
+        }),
       }),
       ...(isDevelopment
         ? []

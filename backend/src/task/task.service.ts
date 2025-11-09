@@ -1,20 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn, ChildProcess } from 'child_process';
 import { CreateTaskDto, CreateTaskResponseDto, TaskStatusDto } from './dto/task.dto';
 import { Task, TaskProcess } from './interfaces/task.interface';
+import { TaskGateway } from './task.gateway';
+import * as readline from 'readline';
 
 @Injectable()
 export class TaskService {
   private readonly logger = new Logger(TaskService.name);
-  private readonly projectRoot: string;
-  private readonly configSpaceDir: string;
-  private readonly evaluatorDir: string;
-  private readonly tasksDir: string;
-  private readonly runningTasks: Map<string, TaskProcess> = new Map();
 
-  constructor() {
+  constructor(
+    @Inject(forwardRef(() => TaskGateway))
+    private readonly taskGateway: TaskGateway,
+  ) {
     // 项目根目录（backend 的上一级）
     this.projectRoot = path.resolve(__dirname, '..', '..', '..');
     this.configSpaceDir = path.join(this.projectRoot, 'configs', 'space');
@@ -24,6 +24,11 @@ export class TaskService {
     // 确保目录存在
     this.ensureDirectories();
   }
+  private readonly projectRoot: string;
+  private readonly configSpaceDir: string;
+  private readonly evaluatorDir: string;
+  private readonly tasksDir: string;
+  private readonly runningTasks: Map<string, TaskProcess> = new Map();
 
   private ensureDirectories() {
     [this.configSpaceDir, this.evaluatorDir, this.tasksDir].forEach((dir) => {
@@ -87,6 +92,14 @@ export class TaskService {
       task.updatedAt = new Date();
       fs.writeFileSync(taskMetaPath, JSON.stringify(task, null, 2), 'utf-8');
 
+      // 推送任务启动状态
+      this.taskGateway.emitTaskStatus({
+        taskId,
+        status: 'running',
+        message: '任务已启动',
+        timestamp: new Date().toISOString(),
+      });
+
       return {
         taskId,
         createdAt: timestamp,
@@ -108,10 +121,22 @@ export class TaskService {
       throw new NotFoundException(`启动脚本不存在: ${startScriptPath}`);
     }
 
+    // 从任务元数据中获取任务名称
+    const taskMetaPath = path.join(this.tasksDir, `${taskId}_meta.json`);
+    let taskName = taskId; // 默认使用 taskId
+    if (fs.existsSync(taskMetaPath)) {
+      try {
+        const taskMeta = JSON.parse(fs.readFileSync(taskMetaPath, 'utf-8'));
+        taskName = taskMeta.name || taskId;
+      } catch (error) {
+        this.logger.warn(`Failed to read task name from metadata: ${error.message}`);
+      }
+    }
+
     return new Promise((resolve, reject) => {
       try {
-        // 启动 start.sh
-        const process = spawn('bash', [startScriptPath], {
+        // 启动 start.sh，传递任务名称参数
+        const process = spawn('bash', [startScriptPath, taskName], {
           cwd: this.projectRoot,
           detached: true,
           stdio: ['ignore', 'pipe', 'pipe'],
@@ -138,14 +163,68 @@ export class TaskService {
         const stdoutStream = fs.createWriteStream(stdoutPath, { flags: 'a' });
         const stderrStream = fs.createWriteStream(stderrPath, { flags: 'a' });
 
-        process.stdout.pipe(stdoutStream);
-        process.stderr.pipe(stderrStream);
+        // 实时读取并推送 stdout
+        const stdoutReader = readline.createInterface({
+          input: process.stdout, // 读取子进程的 stdout
+          terminal: false,
+        });
+
+        stdoutReader.on('line', (line) => {
+          const content = line + '\n';
+          stdoutStream.write(content);
+          
+          // 如果有客户端订阅，推送日志
+          if (this.taskGateway.hasSubscribers(taskId)) {
+            this.logger.debug(`推送 stdout 日志: ${content.substring(0, 50)}`);
+            this.taskGateway.emitTaskLog({
+              taskId,
+              type: 'stdout',
+              content,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        });
+
+        // 实时读取并推送 stderr
+        const stderrReader = readline.createInterface({
+          input: process.stderr, // 读取子进程的 stderr
+          terminal: false,
+        });
+
+        stderrReader.on('line', (line) => {
+          const content = line + '\n';
+          stderrStream.write(content);
+          
+          // 如果有客户端订阅，推送日志
+          if (this.taskGateway.hasSubscribers(taskId)) {
+            this.logger.debug(`推送 stderr 日志: ${content.substring(0, 50)}`);
+            this.taskGateway.emitTaskLog({
+              taskId,
+              type: 'stderr',
+              content,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        });
 
         // 监听进程退出
         process.on('exit', (code, signal) => {
           this.logger.log(`Task ${taskId} exited with code ${code}, signal ${signal}`);
           this.runningTasks.delete(taskId);
-          this.updateTaskStatus(taskId, code === 0 ? 'completed' : 'failed', code !== 0 ? `Exit code: ${code}` : undefined);
+          
+          const status = code === 0 ? 'completed' : 'failed';
+          const errorMessage = code !== 0 ? `Exit code: ${code}` : undefined;
+          
+          this.updateTaskStatus(taskId, status, errorMessage);
+          
+          // 推送任务状态更新
+          this.taskGateway.emitTaskStatus({
+            taskId,
+            status,
+            message: errorMessage || '任务执行完成',
+            timestamp: new Date().toISOString(),
+          });
+          
           stdoutStream.end();
           stderrStream.end();
         });
@@ -154,6 +233,15 @@ export class TaskService {
           this.logger.error(`Task ${taskId} error: ${error.message}`);
           this.runningTasks.delete(taskId);
           this.updateTaskStatus(taskId, 'failed', error.message);
+          
+          // 推送任务错误状态
+          this.taskGateway.emitTaskStatus({
+            taskId,
+            status: 'failed',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          });
+          
           stdoutStream.end();
           stderrStream.end();
           reject(error);

@@ -20,6 +20,7 @@ import {
   EyeOutlined,
   DeleteOutlined,
   CopyOutlined,
+  MonitorOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/hooks/useAppDispatch';
@@ -186,10 +187,10 @@ const TaskList: React.FC = () => {
           <Button
             type="link"
             size="small"
-            icon={<CopyOutlined />}
-            onClick={() => message.info('复制功能开发中')}
+            icon={<MonitorOutlined />}
+            onClick={() => navigate(`/tasks/${record.id}/monitor`)}
           >
-            复制
+            监控
           </Button>
           <Popconfirm
             title="确定删除此任务吗？"

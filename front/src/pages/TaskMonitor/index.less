@@ -1,0 +1,137 @@
+.task-monitor {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
+
+  &-header {
+    margin-bottom: 24px;
+  }
+
+  .log-container {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    max-height: 600px;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #2d2d2d;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #5a5a5a;
+      border-radius: 4px;
+
+      &:hover {
+        background: #707070;
+      }
+    }
+
+    .log-empty {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+      color: #888;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+
+      .log-timestamp {
+        color: #858585;
+        margin-right: 8px;
+      }
+
+      .log-type {
+        font-weight: bold;
+        margin-right: 8px;
+
+        &-stdout {
+          color: #4ec9b0;
+        }
+
+        &-stderr {
+          color: #ce9178;
+        }
+
+        &-status {
+          color: #dcdcaa;
+        }
+      }
+
+      .log-level {
+        font-weight: bold;
+        margin-right: 8px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 11px;
+
+        &-badge-info {
+          color: #4fc3f7;
+          background: rgba(79, 195, 247, 0.15);
+        }
+
+        &-badge-warning {
+          color: #ffb74d;
+          background: rgba(255, 183, 77, 0.15);
+        }
+
+        &-badge-error {
+          color: #f48771;
+          background: rgba(244, 135, 113, 0.15);
+        }
+
+        &-badge-success {
+          color: #81c784;
+          background: rgba(129, 199, 132, 0.15);
+        }
+      }
+
+      .log-content {
+        color: #d4d4d4;
+      }
+
+      // 根据日志级别着色
+      &.log-level-error {
+        .log-content {
+          color: #f48771;
+        }
+      }
+
+      &.log-level-warning {
+        .log-content {
+          color: #ffb74d;
+        }
+      }
+
+      &.log-level-success {
+        .log-content {
+          color: #81c784;
+        }
+      }
+
+      &.log-level-info {
+        .log-content {
+          color: #d4d4d4;
+        }
+      }
+
+      &:hover {
+        background: #2d2d2d;
+      }
+    }
+  }
+}
+

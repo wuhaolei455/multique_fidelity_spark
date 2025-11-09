@@ -3,6 +3,9 @@
 # 瀑布流组件调优启动脚本
 # 使用 waterfall-component-optimized.json 配置空间进行参数调优
 
+# 接收任务名称参数
+TASK_NAME=${1:-"default_task"}
+
 # 初始化 conda（根据系统自动检测 conda 路径）
 if [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
     source "$HOME/anaconda3/etc/profile.d/conda.sh"
@@ -32,6 +35,7 @@ echo "=========================================="
 echo "🚀 启动瀑布流组件调优任务"
 echo "=========================================="
 echo ""
+echo "📋 任务名称: $TASK_NAME"
 echo "📦 配置空间: waterfall-component-optimized.json"
 echo "🎯 调优目标: 优化瀑布流组件性能"
 echo "📊 参数数量: 25 个"
@@ -41,7 +45,8 @@ echo "=========================================="
 python main.py \
     --config configs/waterfall.yaml \
     --test_mode \
-    --iter_num 10
+    --iter_num 10 \
+    --task "$TASK_NAME"
 
 echo ""
 echo "=========================================="

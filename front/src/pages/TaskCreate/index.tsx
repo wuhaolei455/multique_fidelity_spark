@@ -101,8 +101,8 @@ const TaskCreate: React.FC = () => {
       message.success('任务创建成功并已启动！');
       console.log('任务创建结果:', result);
       
-      // 跳转到任务列表页面
-      navigate('/tasks');
+      // 跳转到任务监控页面
+      navigate(`/tasks/${result.taskId}/monitor`);
     } catch (error: any) {
       console.error('任务创建失败详情:', error);
       
