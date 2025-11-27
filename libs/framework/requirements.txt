@@ -71,3 +71,5 @@ urllib3
 wcwidth==0.2.13
 xgboost==2.1.4
 zipp==3.20.2
+dimensio
+pyspark
