@@ -5,12 +5,9 @@ import subprocess
 import json
 import time
 import numpy as np
-import pandas as pd
-from datetime import datetime
 from openbox import logger
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-from config import ConfigManager
 import paramiko
 
 
@@ -467,3 +464,16 @@ def resolve_runtime_metrics(
     os.remove(zstd_file)
     os.remove(json_file)
     logger.info(f"Initialized current task default with meta feature shape: {metrics.shape}")
+
+def config_to_dict(config: Any) -> Dict[str, Any]:
+    if config is None:
+        return {}
+    if hasattr(config, "get_dictionary"):
+        try:
+            return dict(config.get_dictionary())
+        except Exception:
+            pass
+    try:
+        return dict(config)
+    except Exception:
+        return {}

@@ -67,20 +67,6 @@ def _safe_weighted_corr(
 # ---------------------------------------------------------------------------
 # Observation, Record, History and DataFrame utilities
 # ---------------------------------------------------------------------------
-def config_to_dict(config: Any) -> Dict[str, Any]:
-    if config is None:
-        return {}
-    if hasattr(config, "get_dictionary"):
-        try:
-            return dict(config.get_dictionary())
-        except Exception:
-            pass
-    try:
-        return dict(config)
-    except Exception:
-        return {}
-
-
 def _observation_to_record(observation: Observation, sql_type: str) -> Dict[str, float]:
     """Convert an Observation into a flat record for tabular analysis.
     
