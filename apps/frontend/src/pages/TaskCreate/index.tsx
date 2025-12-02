@@ -2,14 +2,36 @@
  * 任务创建页面
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Steps, Button, message, Form } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { createTaskWithScript } from '@/services/api/taskApi';
+import { launchFrameworkTask, createFrameworkTask, startTask, LaunchFrameworkPayload } from '@/services/api/taskApi';
 import BasicInfoStep from './BasicInfoStep';
 import EvaluatorScriptStep from './EvaluatorScriptStep';
+import ConfigSpaceStep from './ConfigSpaceStep';
 import PreviewStep from './PreviewStep';
 import './index.less';
+
+const DEFAULT_FORM_VALUES = {
+  iterNum: 10,
+  database: 'tpcds_100g',
+  similarityThreshold: 0.5,
+  target: 'tpcds_100g',
+  seed: 42,
+  randProb: 0.15,
+  randMode: 'ran',
+  compress: 'shap',
+  cpStrategy: 'none',
+  cpTopk: 40,
+  cpSigma: 2.0,
+  cpTopRatio: 0.8,
+  wsInitNum: 4,
+  wsTopk: 4,
+  wsInnerSurrogateModel: 'prf',
+  tlTopk: 3,
+  schedulerR: 27,
+  schedulerEta: 3,
+};
 
 const TaskCreate: React.FC = () => {
   const navigate = useNavigate();
@@ -18,35 +40,69 @@ const TaskCreate: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  useEffect(() => {
+    form.setFieldsValue(DEFAULT_FORM_VALUES);
+  }, [form]);
+
   const stepTitles = [
     { title: '基本信息' },
-    { title: '配置空间和脚本' },
-    { title: '预览和提交' },
+    { title: '配置空间' },
+    { title: '历史与数据' },
+    { title: '预览与提交' },
   ];
 
+  const stepFieldGroups: Record<number, string[]> = {
+    0: [
+      'name',
+      'iterNum',
+      'database',
+      'similarityThreshold',
+      'target',
+      'compress',
+      'cpStrategy',
+      'cpTopk',
+      'cpSigma',
+      'cpTopRatio',
+      'wsInitNum',
+      'wsTopk',
+      'wsInnerSurrogateModel',
+      'schedulerR',
+      'schedulerEta',
+    ],
+    1: ['configSpaceContent'],
+    2: ['historyFileContent'],
+  };
+
+  // 使用 display: none 来控制显示隐藏，以保留表单状态
   const renderStepContent = () => {
-    switch (currentStep) {
-      case 0:
-        return <BasicInfoStep form={form} />;
-      case 1:
-        return <EvaluatorScriptStep form={form} />;
-      case 2:
-        return <PreviewStep key={refreshKey} form={form} />;
-      default:
-        return null;
-    }
+    return (
+      <>
+        <div style={{ display: currentStep === 0 ? 'block' : 'none' }}>
+          <BasicInfoStep form={form} />
+        </div>
+        <div style={{ display: currentStep === 1 ? 'block' : 'none' }}>
+          <ConfigSpaceStep form={form} />
+        </div>
+        <div style={{ display: currentStep === 2 ? 'block' : 'none' }}>
+          <EvaluatorScriptStep form={form} />
+        </div>
+        <div style={{ display: currentStep === 3 ? 'block' : 'none' }}>
+          <PreviewStep key={refreshKey} form={form} />
+        </div>
+      </>
+    );
   };
 
   const handleNext = async () => {
     try {
-      const values = form.getFieldsValue();
-      console.log('点击下一步时的表单值:', values);
-      
-      await form.validateFields();
+      const fields = stepFieldGroups[currentStep];
+      if (fields) {
+        await form.validateFields(fields);
+      }
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
       
-      if (nextStep === 2) {
+      if (nextStep === 3) {
         setRefreshKey(prev => prev + 1);
       }
     } catch (error) {
@@ -62,47 +118,58 @@ const TaskCreate: React.FC = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      await form.validateFields();
       const values = form.getFieldsValue();
-      
-      // 验证必填字段
-      if (!values.name) {
-        message.error('请输入任务名称');
-        return;
-      }
+
       if (!values.configSpaceContent) {
-        message.error('请上传配置空间或使用默认模板');
-        return;
-      }
-      if (!values.evaluatorScript) {
-        message.error('请上传评估器脚本或使用默认模板');
+        message.error('请上传配置空间 JSON');
         return;
       }
 
-      console.log('表单所有值:', values);
-      console.log('提交的数据:', {
-        name: values.name,
-        description: values.description,
-        configSpace: values.configSpaceContent,
-        evaluatorScript: values.evaluatorScript,
-        configSpaceFileName: values.configSpaceFileName || 'config_space.json',
-        scriptFileName: values.scriptFileName || 'evaluator.sh',
-      });
-      
-      // 使用新的创建任务API
-      const result = await createTaskWithScript({
+      if (!values.historyFileContent) {
+        message.error('请上传历史 JSON');
+        return;
+      }
+
+      const payload: LaunchFrameworkPayload = {
         name: values.name,
         description: values.description || '',
-        configSpace: values.configSpaceContent,
-        evaluatorScript: values.evaluatorScript,
-        configSpaceFileName: values.configSpaceFileName || 'config_space.json',
-        scriptFileName: values.scriptFileName || 'evaluator.sh',
-      });
+        iterNum: values.iterNum,
+        database: values.database,
+        similarityThreshold: values.similarityThreshold,
+        target: values.target,
+        seed: values.seed,
+        randProb: values.randProb,
+        randMode: values.randMode,
+        compress: values.compress,
+        cpStrategy: values.cpStrategy,
+        cpTopk: values.cpTopk,
+        cpSigma: values.cpSigma,
+        cpTopRatio: values.cpTopRatio,
+        wsInitNum: values.wsInitNum,
+        wsTopk: values.wsTopk,
+        wsInnerSurrogateModel: values.wsInnerSurrogateModel,
+        tlTopk: values.tlTopk,
+        schedulerR: values.schedulerR,
+        schedulerEta: values.schedulerEta,
+        historyFileName: values.historyFileName || undefined,
+        historyFileContent: values.historyFileContent,
+        dataFileName: values.dataFileName || undefined,
+        dataFileContent: values.dataFileContent || undefined,
+        configSpacePath: undefined,
+        hugeSpaceFileContent: values.configSpaceContent,
+      };
+      
+      // 使用新的创建接口
+      const createResult = await createFrameworkTask(payload);
+      console.log('任务创建成功:', createResult);
 
+      // 自动启动任务
+      await startTask(createResult.taskId);
       message.success('任务创建成功并已启动！');
-      console.log('任务创建结果:', result);
       
       // 跳转到任务监控页面
-      navigate(`/tasks/${result.taskId}/monitor`);
+      navigate(`/tasks/${createResult.taskId}/monitor`);
     } catch (error: any) {
       console.error('任务创建失败详情:', error);
       
@@ -120,7 +187,7 @@ const TaskCreate: React.FC = () => {
   return (
     <div className="task-create-page">
       <Card>
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={DEFAULT_FORM_VALUES}>
           <Steps current={currentStep} items={stepTitles} />
           <div className="steps-content">{renderStepContent()}</div>
           <div className="steps-action">
@@ -129,12 +196,12 @@ const TaskCreate: React.FC = () => {
                 上一步
               </Button>
             )}
-            {currentStep < 2 && (
+            {currentStep < 3 && (
               <Button type="primary" onClick={handleNext}>
                 下一步
               </Button>
             )}
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <Button type="primary" onClick={handleSubmit} loading={loading}>
                 提交
               </Button>

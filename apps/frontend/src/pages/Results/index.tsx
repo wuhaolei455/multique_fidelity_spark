@@ -7,13 +7,13 @@ import { Card, Select, Row, Col, Statistic, Spin, Empty, Tabs, message } from 'a
 import { LineChartOutlined, BarChartOutlined, DotChartOutlined } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '@/hooks/useAppDispatch';
 import { fetchTasks } from '@/store/slices/taskSlice';
-import { getTaskTrend, getParameterImportance, getTaskDetail } from '@/services/api/taskApi';
+import { getTaskTrend, getParameterImportance, getTaskDetail, getTaskObservations } from '@/services/api/taskApi';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import ParameterImportanceChart from '@/components/charts/ParameterImportanceChart';
 import ObjectiveDistributionChart from '@/components/charts/ObjectiveDistributionChart';
 import ParameterScatterChart from '@/components/charts/ParameterScatterChart';
 import ParameterBoxChart from '@/components/charts/ParameterBoxChart';
-import type { ParameterImportance } from '@/types';
+import type { ParameterImportance, Observation, TrialState } from '@/types';
 import './index.less';
 
 interface TrendData {
@@ -32,6 +32,7 @@ const Results: React.FC = () => {
   const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [parameterImportance, setParameterImportance] = useState<ParameterImportance[]>([]);
   const [taskDetail, setTaskDetail] = useState<any>(null);
+  const [observations, setObservations] = useState<Observation[]>([]);
 
   // 对任务列表进行去重，确保 ID 唯一
   const uniqueTasks = React.useMemo(() => {
@@ -79,12 +80,14 @@ const Results: React.FC = () => {
 
     const loadTaskData = async () => {
       setLoading(true);
+      setObservations([]);
       try {
         // 并行加载所有数据
-        const [trendRes, importanceRes, detailRes] = await Promise.all([
+        const [trendRes, importanceRes, detailRes, observationsRes] = await Promise.all([
           getTaskTrend(selectedTaskId).catch(() => null),
           getParameterImportance(selectedTaskId).catch(() => ({ parameters: [] })),
           getTaskDetail(selectedTaskId).catch(() => null),
+          getTaskObservations(selectedTaskId, { pageSize: 2000 }).catch(() => null),
         ]);
 
         // 处理趋势数据
@@ -111,6 +114,29 @@ const Results: React.FC = () => {
         // 设置参数重要性
         setParameterImportance(importanceRes.parameters || []);
 
+        // 处理观察数据
+        if (observationsRes && Array.isArray(observationsRes.items)) {
+          const normalizedObservations: Observation[] = observationsRes.items.map((item) => {
+            const trialStateValue =
+              typeof item.trialState === 'number' ? item.trialState : Number(item.trialState ?? 0);
+            const elapsedTimeValue =
+              typeof item.elapsedTime === 'number' ? item.elapsedTime : Number(item.elapsedTime ?? 0);
+
+            return {
+              config: item.config || {},
+              objectives: Array.isArray(item.objectives) ? item.objectives : [],
+              constraints: Array.isArray(item.constraints) ? item.constraints : null,
+              trial_state: (trialStateValue ?? 0) as TrialState,
+              elapsed_time: Number.isNaN(elapsedTimeValue) ? 0 : elapsedTimeValue,
+              create_time: item.createTime || '',
+              extra_info: item.extraInfo,
+            };
+          });
+          setObservations(normalizedObservations);
+        } else {
+          setObservations([]);
+        }
+
         // 设置任务详情
         setTaskDetail(detailRes);
       } catch (error) {
@@ -126,23 +152,32 @@ const Results: React.FC = () => {
 
   // 准备散点图数据（选择最重要的参数）
   const getScatterData = () => {
-    if (!parameterImportance.length || !taskDetail?.observations) {
+    if (!parameterImportance.length || !observations.length) {
       return null;
     }
 
     const topParameter = parameterImportance[0];
-    const observations = taskDetail.observations;
 
     const values = observations
-      .map((obs: any) => {
+      .map((obs) => {
         const paramValue = obs.config[topParameter.parameter];
-        const objective = obs.objectives[0];
+        const objective = obs.objectives?.[0];
         if (paramValue !== undefined && objective !== undefined) {
-          return { x: parseFloat(paramValue), y: objective };
+          const numericValue =
+            typeof paramValue === 'number' ? paramValue : parseFloat(String(paramValue));
+          const numericObjective =
+            typeof objective === 'number' ? objective : parseFloat(String(objective));
+          if (!Number.isNaN(numericValue) && !Number.isNaN(numericObjective)) {
+            return { x: numericValue, y: numericObjective };
+          }
         }
         return null;
       })
-      .filter((v: any) => v !== null);
+      .filter((value): value is { x: number; y: number } => value !== null);
+
+    if (!values.length) {
+      return null;
+    }
 
     return {
       parameterName: topParameter.parameter,
@@ -152,20 +187,20 @@ const Results: React.FC = () => {
 
   // 准备箱线图数据
   const getBoxData = () => {
-    if (!parameterImportance.length || !taskDetail?.observations) {
+    if (!parameterImportance.length || !observations.length) {
       return [];
     }
-
-    const observations = taskDetail.observations;
     const topParameters = parameterImportance.slice(0, 8); // 取前8个重要参数
 
     return topParameters.map((param) => {
       const values = observations
-        .map((obs: any) => {
+        .map((obs) => {
           const value = obs.config[param.parameter];
-          return value !== undefined ? parseFloat(value) : null;
+          if (value === undefined) return null;
+          const numericValue = typeof value === 'number' ? value : parseFloat(String(value));
+          return Number.isNaN(numericValue) ? null : numericValue;
         })
-        .filter((v: number | null) => v !== null);
+        .filter((v): v is number => v !== null);
 
       return {
         name: param.parameter.split('.').pop() || param.parameter,
@@ -339,7 +374,12 @@ const Results: React.FC = () => {
                           <div style={{ marginBottom: 16, color: '#666', fontSize: 12 }}>
                             数据点数量: {trendData.iterations.length}
                           </div>
-                          <PerformanceChart data={trendData} showBest height={500} />
+                          <PerformanceChart
+                            data={trendData}
+                            showBest
+                            height={500}
+                            observations={observations}
+                          />
                         </>
                       ) : (
                         <Empty 

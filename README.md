@@ -75,6 +75,13 @@ docker-compose up -d
 - 默认暴露的端口：`8881`（NestJS 后端）、`8882`（静态前端）、`88`（总入口反向代理）。
 - Python 相关组件维持 3.9 版本（参见 `libs/framework`），前后端皆基于 Node 18，便于统一依赖链。
 
+## UI 任务上传与目录规范
+
+- 仓库根目录下新增 `holly/`，其内固定包含 `config/`、`history/`、`data/`、`result/` 等子目录，后端会自动创建并写入上传内容。
+- 前端「任务创建」向导允许用户填写 `base.yaml` 中常用字段、并上传 `history_json`（必填）与数据文件（可选），提交后会由后端生成独立的 YAML 并调用 `libs/framework/start.sh`。
+- 生成的 YAML 位于 `holly/config/<taskId>.yaml`，历史与数据文件分别落在 `holly/history/`、`holly/data/` 对应子目录，调优结果统一写入 `holly/result/`。
+- 通过 API `/api/tasks/launch-framework` 可直接触发上述流程，返回的任务可在监控页面实时查看日志与状态。
+
 ## 后续规划
 
 - 视需要在 `libs/python-shared` 下增加跨语言共享组件（如 TS 类型定义）。

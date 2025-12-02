@@ -88,8 +88,9 @@ class BaseOptimizer:
 
     def build_path(self):
         self.res_dir = os.path.join(self.save_dir, self.target, self.method_id)
-        if not os.path.exists(self.res_dir):
-            os.makedirs(self.res_dir)
+        if os.path.exists(self.res_dir):
+            shutil.rmtree(self.res_dir)
+        os.makedirs(self.res_dir)
 
         timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f')       
         self.result_path = os.path.join(self.res_dir, "%s_%s.json" % (self.task_id, timestamp))
@@ -97,12 +98,16 @@ class BaseOptimizer:
         self.ts_backup_file = "./backup/ts_backup_%s.pkl" % self.target
         if not os.path.exists("./backup"):
             os.makedirs("./backup")
-        try:
-            self.ts_recorder = pkl.load(open(self.ts_backup_file, 'rb'))
-            logger.warn("Successfully initialize from %s !" % self.ts_backup_file)
-        except FileNotFoundError:
-            self.ts_recorder = []
-            logger.warn("File \"%s\" not found, initialize to empty list" % self.ts_backup_file)
+        
+        if os.path.exists(self.ts_backup_file):
+            try:
+                os.remove(self.ts_backup_file)
+                logger.warn(f"Removed previous backup file: {self.ts_backup_file}")
+            except Exception as e:
+                logger.warn(f"Failed to remove backup file: {e}")
+
+        self.ts_recorder = []
+        logger.warn("Initialize to empty list")
 
 
     def run(self):

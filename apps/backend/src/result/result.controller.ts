@@ -29,29 +29,8 @@ import { PaginatedResponse } from '../common/types/base.types';
 export class ResultController {
   constructor(private readonly resultService: ResultService) {}
 
-  @Post('create')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建新任务' })
-  @ApiResponse({
-    status: 201,
-    description: '任务创建成功',
-    type: CreateTaskResponseDto,
-  })
-  async createTask(@Body() createDto: CreateTaskDto): Promise<CreateTaskResponseDto> {
-    return this.resultService.createTask(createDto);
-  }
+  // Removed create and compare endpoints as requested
 
-  @Post('compare')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '对比多个结果' })
-  @ApiResponse({
-    status: 200,
-    description: '返回结果对比',
-    type: CompareTasksResponseDto,
-  })
-  async compareResults(@Body() compareDto: CompareTasksDto): Promise<CompareTasksResponseDto> {
-    return this.resultService.compareTasks(compareDto);
-  }
 
        @Get('list')
        @ApiOperation({ summary: '获取所有结果列表' })

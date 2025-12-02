@@ -9,13 +9,19 @@ services:
     container_name: multique-backend
     restart: unless-stopped
     ports:
-      - "8881:3000"
+      - "8881:3001"
+    volumes:
+      - ../../configs:/app/configs
+      - ../../holly:/app/holly
+      - ../../results:/app/results
+      - ../../libs:/app/libs
     environment:
       - NODE_ENV=production
+      - HOST_IP=${HOST_IP}
     networks:
       - multique-network
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/docs',{method:'GET'}).then(()=>process.exit(0)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/docs',{method:'GET'}).then(()=>process.exit(0)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3

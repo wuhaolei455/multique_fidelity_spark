@@ -48,11 +48,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
       icon: <BarChartOutlined />,
       label: '结果分析',
     },
-    {
-      key: '/config',
-      icon: <SettingOutlined />,
-      label: '配置管理',
-    },
   ];
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {

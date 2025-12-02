@@ -1,207 +1,283 @@
-import React from 'react';
-import { Form, Upload, Button, message, Input, Space, Alert } from 'antd';
-import { UploadOutlined, FileTextOutlined } from '@ant-design/icons';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Button, Card, Form, Input, Space, Tag, Typography, Upload, message } from 'antd';
 import type { FormInstance } from 'antd';
+import { InboxOutlined } from '@ant-design/icons';
 
-interface EvaluatorScriptStepProps {
+interface HistoryUploadStepProps {
   form: FormInstance;
 }
 
-const EvaluatorScriptStep: React.FC<EvaluatorScriptStepProps> = ({ form }) => {
-  console.log('EvaluatorScriptStep - 渲染时的表单值:', form.getFieldsValue());
-  
-  const handleConfigSpaceUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      try {
-        JSON.parse(content);
-        form.setFieldsValue({
-          configSpaceContent: content,
-          configSpaceFileName: file.name,
-        });
-        message.success('配置空间文件上传成功');
-      } catch (error) {
-        message.error('配置空间文件格式错误，必须是有效的 JSON 文件');
+interface HistoryFileSummary {
+  name: string;
+  size: number;
+}
+
+const MAX_HISTORY_PREVIEW = 4000;
+
+const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
+  const [historyFiles, setHistoryFiles] = useState<HistoryFileSummary[]>([]);
+  const [historyPreview, setHistoryPreview] = useState<string>('');
+  const [dragActive, setDragActive] = useState(false);
+  const [parsingHistory, setParsingHistory] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const cachedContent = form.getFieldValue('historyFileContent');
+    const cachedNames = form.getFieldValue('historyFileName');
+    if (cachedContent && cachedNames) {
+      setHistoryPreview(cachedContent);
+      const names = cachedNames.split(',').map((name: string) => name.trim()).filter(Boolean);
+      setHistoryFiles(names.map((name) => ({ name, size: cachedContent.length })));
+    }
+  }, [form]);
+
+  const parseHistoryFiles = async (files: File[]) => {
+    if (!files.length) {
+      message.warning('请选择至少一个历史 JSON');
+      return;
+    }
+    setParsingHistory(true);
+    try {
+      const merged: any[] = [];
+      for (const file of files) {
+        if (!file.name.endsWith('.json')) {
+          throw new Error(`文件 ${file.name} 不是 JSON 格式`);
+        }
+        const text = await file.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (error) {
+          // 尝试兼容处理 Infinity 和 NaN
+          try {
+            const fixedText = text.replace(
+              /"(?:\\.|[^"\\])*"|(-?Infinity)|(NaN)/g,
+              (match) => {
+                if (match.startsWith('"')) return match;
+                return `"${match}"`;
+              }
+            );
+            json = JSON.parse(fixedText);
+          } catch (fixError) {
+            throw new Error(`解析 ${file.name} 失败：${error instanceof Error ? error.message : '格式错误'}`);
+          }
+        }
+        if (Array.isArray(json)) {
+          merged.push(...json);
+        } else {
+          merged.push(json);
+        }
       }
-    };
-    reader.readAsText(file);
-    return false;
+      if (merged.length === 0) {
+        throw new Error('历史 JSON 不能为空');
+      }
+      const formatted = JSON.stringify(merged, null, 2);
+      form.setFieldsValue({
+        historyFileContent: formatted,
+        historyFileName: files.map((f) => f.name).join(', '),
+      });
+      setHistoryPreview(formatted);
+      setHistoryFiles(files.map((f) => ({ name: f.name, size: f.size })));
+      message.success(`成功导入 ${files.length} 个历史文件`);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '读取历史文件失败');
+      setHistoryFiles([]);
+      setHistoryPreview('');
+      form.setFieldsValue({
+        historyFileContent: undefined,
+        historyFileName: undefined,
+      });
+    } finally {
+      setParsingHistory(false);
+    }
   };
 
-  const handleScriptUpload = (file: File) => {
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(false);
+    if (parsingHistory) return;
+    const files = Array.from(event.dataTransfer.files).filter((file) => file.name.endsWith('.json'));
+    if (!files.length) {
+      message.warning('请拖拽 JSON 文件');
+      return;
+    }
+    parseHistoryFiles(files);
+  };
+
+  const handleSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      parseHistoryFiles(Array.from(files));
+      event.target.value = '';
+    }
+  };
+
+  const clearHistory = () => {
+    setHistoryFiles([]);
+    setHistoryPreview('');
+    form.setFieldsValue({
+      historyFileContent: undefined,
+      historyFileName: undefined,
+    });
+  };
+
+  const handleDataUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
       form.setFieldsValue({
-        evaluatorScript: content,
-        scriptFileName: file.name,
+        dataFileContent: content,
+        dataFileName: file.name,
       });
-      message.success('脚本文件上传成功');
+      message.success('数据文件上传成功');
     };
     reader.readAsText(file);
     return false;
   };
 
-  const useDefaultConfigSpace = () => {
-    const defaultConfig = {
-      hyperparameters: [
-        {
-          name: 'spark.executor.memory',
-          type: 'int',
-          log: false,
-          lower: 1,
-          upper: 128,
-          default: 4,
-        },
-        {
-          name: 'spark.executor.cores',
-          type: 'int',
-          log: false,
-          lower: 1,
-          upper: 32,
-          default: 2,
-        },
-        {
-          name: 'spark.sql.shuffle.partitions',
-          type: 'int',
-          log: false,
-          lower: 100,
-          upper: 3000,
-          default: 200,
-        },
-      ],
-    };
-    const content = JSON.stringify(defaultConfig, null, 2);
-    form.setFieldsValue({
-      configSpaceContent: content,
-      configSpaceFileName: 'default_config_space.json',
-    });
-    message.success('已加载默认配置空间模板');
-  };
-
-  const useDefaultScript = () => {
-    const defaultScript = `#!/bin/bash
-
-echo "=========================================="
-echo "🚀 启动优化任务"
-echo "=========================================="
-echo ""
-echo "📦 配置空间: $1"
-echo "🎯 调优目标: 优化性能"
-echo ""
-echo "=========================================="
-
-python main.py --config configs/waterfall.yaml
-
-echo ""
-echo "=========================================="
-echo "✅ 任务完成！"
-echo "=========================================="
-`;
-    form.setFieldsValue({
-      evaluatorScript: defaultScript,
-      scriptFileName: 'default_evaluator.sh',
-    });
-    message.success('已加载默认脚本模板');
-  };
-
   return (
     <div>
+      <Form.Item
+        name="historyFileContent"
+        rules={[{ required: true, message: '请上传历史 JSON 文件' }]}
+        style={{ display: 'none' }}
+      >
+        <Input.TextArea />
+      </Form.Item>
+      <Form.Item name="historyFileName" style={{ display: 'none' }}>
+        <Input />
+      </Form.Item>
+
       <Alert
-        message="提示"
-        description="请上传配置空间（JSON格式）和评估器脚本（Shell脚本）。这些文件将用于执行优化任务。"
+        message="步骤三：上传历史数据"
+        description="历史 JSON 为必填项，内容会写入 holly/history。支持上传多个 JSON 文件，系统会自动合并。"
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
       />
 
-      {/* 保留第一步的字段 */}
-      <Form.Item name="name" hidden>
-        <Input />
-      </Form.Item>
-      <Form.Item name="description" hidden>
-        <Input />
-      </Form.Item>
-
-      <Form.Item
-        label="配置空间文件"
-        required
-        style={{ marginBottom: 16 }}
+      <div
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragActive(true);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragActive(false);
+        }}
+        onDrop={handleDrop}
+        style={{
+          border: `2px dashed ${dragActive ? '#1677ff' : '#bbb'}`,
+          borderRadius: 8,
+          padding: 32,
+          textAlign: 'center',
+          background: dragActive ? '#f0f7ff' : '#fafafa',
+          transition: 'all 0.15s ease',
+        }}
+        role="button"
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Upload
-            accept=".json"
-            beforeUpload={handleConfigSpaceUpload}
-            maxCount={1}
-            showUploadList={false}
-          >
-            <Button icon={<UploadOutlined />}>选择配置空间文件 (.json)</Button>
-          </Upload>
-          <Button
-            type="link"
-            icon={<FileTextOutlined />}
-            onClick={useDefaultConfigSpace}
-          >
-            使用默认模板
-          </Button>
-        </Space>
-      </Form.Item>
-
-      <Form.Item
-        name="configSpaceContent"
-        label="配置空间内容"
-        rules={[{ required: true, message: '请上传配置空间文件或使用默认模板' }]}
-      >
-        <Input.TextArea
-          rows={10}
-          placeholder="配置空间 JSON 内容将在这里显示..."
-          onChange={(e) => form.setFieldValue('configSpaceContent', e.target.value)}
+        <input
+          type="file"
+          accept=".json"
+          multiple
+          style={{ display: 'none' }}
+          ref={fileInputRef}
+          onChange={handleSelect}
         />
-      </Form.Item>
+        <div style={{ fontSize: 42, marginBottom: 12 }}>
+          <InboxOutlined />
+        </div>
+        <Typography.Title level={4} style={{ marginBottom: 4 }}>
+          拖拽或点击上传 history_json
+        </Typography.Title>
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+          可一次选择多个 JSON 文件，系统将自动解析并合并
+        </Typography.Paragraph>
+        <Button
+          type="primary"
+          onClick={() => fileInputRef.current?.click()}
+          loading={parsingHistory}
+        >
+          选择文件
+        </Button>
+      </div>
 
-      <Form.Item name="configSpaceFileName" hidden>
-        <Input />
-      </Form.Item>
-
-      <Form.Item
-        label="评估器脚本"
-        required
-        style={{ marginBottom: 16, marginTop: 32 }}
-      >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Upload
-            accept=".sh,.bash"
-            beforeUpload={handleScriptUpload}
-            maxCount={1}
-            showUploadList={false}
+      {historyFiles.length > 0 && (
+        <>
+          <Card
+            title="已选择的历史文件"
+            size="small"
+            style={{ marginTop: 24 }}
+            extra={
+              <Button type="link" onClick={clearHistory}>
+                清空
+              </Button>
+            }
           >
-            <Button icon={<UploadOutlined />}>选择脚本文件 (.sh)</Button>
-          </Upload>
-          <Button
-            type="link"
-            icon={<FileTextOutlined />}
-            onClick={useDefaultScript}
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              {historyFiles.map((file) => (
+                <Space key={file.name}>
+                  <span>{file.name}</span>
+                  <Tag>{(file.size / 1024).toFixed(2)} KB</Tag>
+                </Space>
+              ))}
+            </Space>
+          </Card>
+
+          <Card
+            title="历史内容预览"
+            size="small"
+            style={{ marginTop: 16 }}
+            styles={{ body: { maxHeight: 260, overflow: 'auto' } }}
           >
-            使用默认模板
-          </Button>
-        </Space>
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {historyPreview.length > MAX_HISTORY_PREVIEW
+                ? `${historyPreview.slice(0, MAX_HISTORY_PREVIEW)}\n...（预览已截断）`
+                : historyPreview}
+            </pre>
+          </Card>
+        </>
+      )}
+
+      <Alert
+        showIcon
+        type="success"
+        message="数据文件（可选）"
+        description="用于覆盖 mock/data，可上传 SQL、JSON 或压缩包等文本内容。"
+        style={{ marginTop: 24, marginBottom: 16 }}
+      />
+
+      <Form.Item label="数据文件（可选）" style={{ marginBottom: 12 }}>
+        <Upload.Dragger
+          name="data"
+          beforeUpload={handleDataUpload}
+          showUploadList={false}
+          accept=".json,.txt,.sql,.csv,.yaml,.yml"
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text">拖拽或点击上传数据文件</p>
+          <p className="ant-upload-hint">内容将以文本形式存储，可用于 mock/data</p>
+        </Upload.Dragger>
       </Form.Item>
 
-      <Form.Item
-        name="evaluatorScript"
-        label="脚本内容"
-        rules={[{ required: true, message: '请上传评估器脚本或使用默认模板' }]}
-      >
+      <Form.Item name="dataFileContent" label="数据文件内容">
         <Input.TextArea
-          rows={12}
-          placeholder="脚本内容将在这里显示..."
-          onChange={(e) => form.setFieldValue('evaluatorScript', e.target.value)}
+          rows={6}
+          placeholder="可选：直接在此粘贴数据文件内容"
           style={{ fontFamily: 'monospace' }}
         />
       </Form.Item>
 
-      <Form.Item name="scriptFileName" hidden>
+      <Form.Item name="dataFileName" hidden>
         <Input />
       </Form.Item>
     </div>

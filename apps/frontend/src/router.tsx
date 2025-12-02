@@ -11,7 +11,6 @@ import TaskDetail from '@/pages/TaskDetail';
 import TaskCreate from '@/pages/TaskCreate';
 import TaskMonitor from '@/pages/TaskMonitor';
 import Results from '@/pages/Results';
-import Config from '@/pages/Config';
 
 const router = createBrowserRouter([
   {
@@ -41,10 +40,6 @@ const router = createBrowserRouter([
       {
         path: 'results',
         element: <Results />,
-      },
-      {
-        path: 'config',
-        element: <Config />,
       },
     ],
   },

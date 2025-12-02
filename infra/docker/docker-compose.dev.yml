@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend.dev
+    command: npm run start:dev
+    restart: unless-stopped
+    ports:
+      - "8881:3001"
+    volumes:
+      # Mount source code for hot reload
+      - ../../apps/backend:/app/backend
+      # Mount libraries for framework access
+      - ../../libs:/app/libs
+      # Mount config and data directories
+      - ../../configs:/app/configs
+      - ../../holly:/app/holly
+      - ../../results:/app/results
+      # Keep node_modules from the container
+      - /app/backend/node_modules
+    environment:
+      - NODE_ENV=development
+    networks:
+      - multique-network
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.frontend.dev
+    restart: unless-stopped
+    ports:
+      - "8882:4000"
+    volumes:
+      - ../../apps/frontend:/app/frontend
+      - /app/frontend/node_modules
+    environment:
+      # Proxy API requests to backend service
+      - PROXY_TARGET=http://backend:3001
+    depends_on:
+      - backend
+    networks:
+      - multique-network
+
+networks:
+  multique-network:
+    driver: bridge
+

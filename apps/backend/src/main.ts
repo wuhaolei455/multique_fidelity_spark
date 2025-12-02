@@ -3,11 +3,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    cors: true, // 启用 CORS
-  });
+  const app = await NestFactory.create(AppModule);
+
+  // 增加请求体大小限制
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
 
   // 配置 WebSocket 适配器
   app.useWebSocketAdapter(new IoAdapter(app));
@@ -23,8 +26,10 @@ async function bootstrap() {
 
   // CORS配置 - 允许 WebSocket 连接
   app.enableCors({
-    origin: '*',
+    origin: true, // 允许所有来源（反射请求头中的 Origin），配合 credentials: true 使用
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
   });
 
   // Swagger文档配置
@@ -38,8 +43,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
+  const port = process.env.PORT || 3001;
+  await app.listen(port); 
   console.log(`Application is running on: http://localhost:${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
 }

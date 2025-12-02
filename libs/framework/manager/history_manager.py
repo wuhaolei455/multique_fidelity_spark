@@ -33,14 +33,19 @@ class HistoryManager:
         for filename in os.listdir(self.history_dir):
             if filename.endswith('.json'):
                 filepath = os.path.join(self.history_dir, filename)
-                history = History.load_json(filename=filepath, config_space=self.config_space)
-                self.historical_tasks.append(history)
-                meta_feature = history.meta_info.get('meta_feature')
-                if meta_feature is not None:
-                    logger.debug(f"Got meta_feature: {meta_feature} from {filename}")
-                    self.historical_meta_features.append(np.array(meta_feature))
-                else:
-                    logger.warning(f"No meta_feature found in {filename}")
+                try:
+                    logger.debug(f"Loading history file: {filename}")
+                    history = History.load_json(filename=filepath, config_space=self.config_space)
+                    self.historical_tasks.append(history)
+                    meta_feature = history.meta_info.get('meta_feature')
+                    if meta_feature is not None:
+                        logger.debug(f"Got meta_feature: {meta_feature} from {filename}")
+                        self.historical_meta_features.append(np.array(meta_feature))
+                    else:
+                        logger.warning(f"No meta_feature found in {filename}")
+                except Exception as e:
+                    logger.error(f"Failed to load history file {filename}: {e}")
+                    continue
         
         logger.info(f"Loaded {len(self.historical_tasks)} historical tasks from {self.history_dir}")
     

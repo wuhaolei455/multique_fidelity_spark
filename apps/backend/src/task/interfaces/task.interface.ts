@@ -2,8 +2,11 @@ export interface Task {
   id: string;
   name: string;
   description?: string;
-  configSpacePath: string;
-  scriptPath: string;
+  configSpacePath?: string;
+  scriptPath?: string;
+  configFilePath?: string;
+  historyFilePath?: string;
+  dataFilePath?: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   processId?: number;
   createdAt: Date;

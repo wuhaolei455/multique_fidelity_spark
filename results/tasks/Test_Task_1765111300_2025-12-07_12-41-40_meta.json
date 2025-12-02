@@ -1,0 +1,11 @@
+{
+  "id": "Test_Task_1765111300_2025-12-07_12-41-40",
+  "name": "Test_Task_1765111300",
+  "description": "Automated test task",
+  "status": "completed",
+  "createdAt": "2025-12-07T12:41:40.465Z",
+  "updatedAt": "2025-12-07T12:41:53.387Z",
+  "configFilePath": "/app/holly/config/Test_Task_1765111300_2025-12-07_12-41-40.yaml",
+  "historyFilePath": "/app/holly/history/auto_test_history.json",
+  "processId": 42
+}

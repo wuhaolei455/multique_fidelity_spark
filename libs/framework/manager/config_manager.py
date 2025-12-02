@@ -239,7 +239,7 @@ class ConfigManager:
     def expert_space(self) -> str:
         return os.path.join(
             self.root_dir,
-            self.config_spaces['expert_space']
+            # self.config_spaces['expert_space']
         )
     
     @property

@@ -10,7 +10,7 @@ interface CustomAxiosInstance extends AxiosInstance {
 // 创建 axios 实例
 const axiosInstance = axios.create({
   baseURL: '/api',
-  timeout: 30000,
+  timeout: 300000, // 增加到 5 分钟
   headers: {
     'Content-Type': 'application/json',
   },

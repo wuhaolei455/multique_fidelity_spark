@@ -5,6 +5,12 @@
 
 # 接收任务名称参数
 TASK_NAME=${1:-"default_task"}
+CONFIG_PATH="${CONFIG_PATH:-configs/base.yaml}"
+ITER_NUM="${ITER_NUM:-10}"
+HISTORY_DIR="${HISTORY_DIR:-mock/history}"
+SAVE_DIR="${SAVE_DIR:-results/waterfall_results/}"
+COMPRESS="${COMPRESS:-shap}"
+CP_TOPK="${CP_TOPK:-40}"
 
 # 工作目录与依赖路径
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -16,7 +22,7 @@ REQ_HASH_FILE="$VENV_DIR/.requirements.sha256"
 
 if [ ! -d "$VENV_DIR" ]; then
     echo "⚙️  创建 Python3.9 虚拟环境..."
-    python3.9 -m venv "$VENV_DIR"
+    python3 -m venv "$VENV_DIR"
     if [ $? -ne 0 ]; then
         echo "❌ 错误: 无法创建 Python3.9 虚拟环境"
         exit 1
@@ -62,26 +68,26 @@ echo "🚀 启动瀑布流组件调优任务"
 echo "=========================================="
 echo ""
 echo "📋 任务名称: $TASK_NAME"
-echo "📦 配置空间: waterfall-component-optimized.json"
-echo "🎯 调优目标: 优化瀑布流组件性能"
-echo "📊 参数数量: 25 个"
+echo "📄 配置文件: $CONFIG_PATH"
+echo "📂 历史目录: $HISTORY_DIR"
+echo "💾 结果目录: $SAVE_DIR"
 echo ""
 echo "=========================================="
 
-python "$SCRIPT_DIR/main.py" \
-    --config configs/base.yaml \
+python3 "$SCRIPT_DIR/main.py" \
+    --config "$CONFIG_PATH" \
     --test_mode \
-    --iter_num 10 \
+    --iter_num "$ITER_NUM" \
     --task "$TASK_NAME" \
-    --history_dir mock/history \
-    --save_dir results/waterfall_results/ \
-    --compress shap \
-    --cp_topk 40 
+    --history_dir "$HISTORY_DIR" \
+    --save_dir "$SAVE_DIR" \
+    --compress "$COMPRESS" \
+    --cp_topk "$CP_TOPK"
 
 
 echo ""
 echo "=========================================="
 echo "✅ 调优任务完成！"
-echo "📁 结果保存在: results/waterfall_results/"
+echo "📁 结果保存在: $SAVE_DIR"
 echo "=========================================="
 

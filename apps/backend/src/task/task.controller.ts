@@ -13,6 +13,7 @@ import {
   CreateTaskDto,
   CreateTaskResponseDto,
   TaskStatusDto,
+  LaunchFrameworkTaskDto,
 } from './dto/task.dto';
 import { Task } from './interfaces/task.interface';
 
@@ -23,18 +24,26 @@ export class TaskController {
 
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建新任务并启动' })
+  @ApiOperation({ summary: '创建任务 (包含文件上传, 但不自动启动)' })
   @ApiResponse({
     status: 201,
-    description: '任务创建成功并已启动',
+    description: '任务创建成功',
     type: CreateTaskResponseDto,
   })
+  async create(@Body() launchDto: LaunchFrameworkTaskDto): Promise<CreateTaskResponseDto> {
+    return this.taskService.launchFrameworkTask(launchDto);
+  }
+
+  @Post(':taskId/start')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '启动已创建的任务' })
+  @ApiParam({ name: 'taskId', description: '任务ID' })
   @ApiResponse({
-    status: 400,
-    description: '请求参数错误',
+    status: 200,
+    description: '任务启动成功',
   })
-  async createTask(@Body() createDto: CreateTaskDto): Promise<CreateTaskResponseDto> {
-    return this.taskService.createTask(createDto);
+  async startTask(@Param('taskId') taskId: string): Promise<void> {
+    await this.taskService.startTask(taskId);
   }
 
   @Get('list')

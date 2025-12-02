@@ -4,13 +4,11 @@
 
 import { configureStore } from '@reduxjs/toolkit';
 import taskReducer from './slices/taskSlice';
-import configReducer from './slices/configSlice';
 import uiReducer from './slices/uiSlice';
 
 export const store = configureStore({
   reducer: {
     task: taskReducer,
-    config: configReducer,
     ui: uiReducer,
   },
 });

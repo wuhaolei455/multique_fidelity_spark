@@ -10,8 +10,43 @@ import type {
   BestConfigResponse,
   TaskComparisonResponse,
   TaskCreateRequest,
+  Config,
 } from '@/types';
 import { toTaskSummary } from '@/types';
+
+export interface LaunchFrameworkPayload {
+  name: string;
+  description?: string;
+  iterNum?: number;
+  database?: string;
+  similarityThreshold?: number;
+  logDir?: string;
+  dataDir?: string;
+  historyDir?: string;
+  saveDir?: string;
+  target?: string;
+  seed?: number;
+  randProb?: number;
+  randMode?: 'ran' | 'rs';
+  wsInitNum?: number;
+  wsTopk?: number;
+  wsInnerSurrogateModel?: string;
+  tlTopk?: number;
+  compress?: string;
+  cpStrategy?: string;
+  cpTopk?: number;
+  cpSigma?: number;
+  cpTopRatio?: number;
+  schedulerR?: number;
+  schedulerEta?: number;
+  configSpacePath?: string;
+  expertSpacePath?: string;
+  historyFileName?: string;
+  historyFileContent: string;
+  dataFileName?: string;
+  dataFileContent?: string;
+  hugeSpaceFileContent?: string;
+}
 
 // 获取任务列表（完整数据，包含 meta_info 和 observations）
 export const getTasks = (): Promise<TaskListResponse> => {
@@ -116,6 +151,39 @@ export const createTaskWithScript = (data: {
   });
 };
 
+export const createFrameworkTask = (data: LaunchFrameworkPayload) => {
+  return request<{
+    taskId: string;
+    createdAt: string;
+    status: string;
+    configSpacePath: string;
+    scriptPath: string;
+    configFilePath: string;
+    historyFilePath: string;
+    dataFilePath: string;
+  }>({
+    url: '/tasks/create',
+    method: 'POST',
+    data,
+  });
+};
+
+export const startTask = (taskId: string) => {
+  return request<void>({
+    url: `/tasks/${taskId}/start`,
+    method: 'POST',
+  });
+};
+
+export const launchFrameworkTask = (data: LaunchFrameworkPayload) => {
+  // Deprecated: Use createFrameworkTask + startTask instead
+  return request({
+    url: '/tasks/launch-framework',
+    method: 'POST',
+    data,
+  });
+};
+
 // 更新任务（后端不支持，返回提示）
 export const updateTask = (
   _taskId: string,
@@ -197,6 +265,40 @@ export const getTaskTrend = (taskId: string): Promise<{
   return request({
     url: `/results/${taskId}/trend`,
     method: 'GET',
+  });
+};
+
+interface ObservationResponse {
+  index: number;
+  config: Config;
+  objectives: number[];
+  constraints?: number[] | null;
+  trialState: number;
+  elapsedTime: number;
+  createTime: string;
+  extraInfo?: Record<string, unknown>;
+}
+
+interface ObservationListResponse {
+  items: ObservationResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const getTaskObservations = (
+  taskId: string,
+  params?: { page?: number; pageSize?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' },
+): Promise<ObservationListResponse> => {
+  return request({
+    url: `/results/${taskId}/observations`,
+    method: 'GET',
+    params: {
+      page: 1,
+      pageSize: 1000,
+      ...(params || {}),
+    },
   });
 };
 

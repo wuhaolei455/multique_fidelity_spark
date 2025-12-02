@@ -75,7 +75,7 @@ module.exports = (env, argv) => {
       }),
       new webpack.DefinePlugin({
         'process.env': JSON.stringify({
-          REACT_APP_API_URL: process.env.REACT_APP_API_URL || 'http://localhost:3000',
+          REACT_APP_API_URL: process.env.REACT_APP_API_URL || '',
           NODE_ENV: argv.mode || 'development',
         }),
       }),
@@ -89,12 +89,23 @@ module.exports = (env, argv) => {
     ],
     devServer: {
       port: 4000,
+      host: '0.0.0.0',
+      allowedHosts: 'all',
       hot: true,
       historyApiFallback: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:3000',
+          target: process.env.PROXY_TARGET || 'http://localhost:3001',
           changeOrigin: true,
+          timeout: 300000,
+          proxyTimeout: 300000,
+        },
+        '/socket.io': {
+          target: process.env.PROXY_TARGET || 'http://localhost:3001',
+          changeOrigin: true,
+          ws: true,
+          timeout: 300000,
+          proxyTimeout: 300000,
         },
       },
     },

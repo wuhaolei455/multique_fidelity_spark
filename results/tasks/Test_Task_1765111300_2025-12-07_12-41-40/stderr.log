@@ -1,0 +1,16 @@
+[2025-12-07 12:41:52,371][Test_Task_1765111300][INFO][color_logger.py:203] Logfile: /app/holly/result/log/tpcds_100g/MFES_SMAC/Test_Task_1765111300_2025-12-07-12-41-52-368232.log
+[2025-12-07 12:41:52,373][Test_Task_1765111300][INFO][evaluator.py:195] Fallback to full SQL list when first called to calculate meta features
+Traceback (most recent call last):
+  File "/app/libs/framework/main.py", line 25, in <module>
+    task_manager = TaskManager.instance(
+  File "/app/libs/framework/manager/task_manager.py", line 19, in instance
+    cls._instance = cls(*args, **kwargs)
+  File "/app/libs/framework/manager/task_manager.py", line 42, in __init__
+    self.history_manager = HistoryManager(
+  File "/app/libs/framework/manager/history_manager.py", line 26, in __init__
+    self._load_historical_tasks()
+  File "/app/libs/framework/manager/history_manager.py", line 36, in _load_historical_tasks
+    history = History.load_json(filename=filepath, config_space=self.config_space)
+  File "/usr/local/lib/python3.9/dist-packages/openbox/utils/history.py", line 1096, in load_json
+    global_start_time = data.pop('global_start_time')
+KeyError: 'global_start_time'

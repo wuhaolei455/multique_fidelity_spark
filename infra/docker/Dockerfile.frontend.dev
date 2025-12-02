@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /app/frontend
+
+# 设置环境变量
+ENV NODE_ENV=development
+
+# 暴露端口
+EXPOSE 4000
+
+# 启动时安装依赖并运行
+# 1. 设置淘宝源
+# 2. 安装依赖 (如果 node_modules 已存在且匹配，npm 会自动跳过)
+# 3. 安装 webpack-cli (确保命令行工具有效)
+# 4. 启动开发服务器
+CMD sh -c "npm config set registry https://registry.npmmirror.com && npm install --legacy-peer-deps && npm install webpack-cli --no-save && npm start"

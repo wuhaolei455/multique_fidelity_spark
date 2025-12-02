@@ -48,8 +48,8 @@ export const useTaskWebSocket = (options: UseTaskWebSocketOptions = {}) => {
       return;
     }
 
-    const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
-    console.log('连接到 WebSocket 服务器:', backendUrl);
+    const backendUrl = process.env.REACT_APP_API_URL || undefined;
+    console.log('连接到 WebSocket 服务器:', backendUrl || 'current host');
 
     const socket = io(backendUrl, {
       path: '/socket.io',
