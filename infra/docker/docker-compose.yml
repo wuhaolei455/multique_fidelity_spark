@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  backend:
+    image: multique-backend:latest
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend
+    container_name: multique-backend
+    restart: unless-stopped
+    ports:
+      - "8881:3000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - multique-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/docs',{method:'GET'}).then(()=>process.exit(0)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: multique-frontend:latest
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.frontend
+    container_name: multique-frontend
+    restart: unless-stopped
+    ports:
+      - "8882:80"
+    depends_on:
+      - backend
+    networks:
+      - multique-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: multique-nginx
+    restart: unless-stopped
+    ports:
+      - "88:88"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/multique.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - multique-network
+
+networks:
+  multique-network:
+    driver: bridge
+
+

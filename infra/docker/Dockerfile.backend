@@ -1,0 +1,40 @@
+FROM node:18-bullseye AS builder
+
+WORKDIR /app/backend
+
+# 加速 npm 源，兼容国内网络
+RUN npm config set registry https://registry.npmmirror.com
+
+# 仅复制依赖文件，充分利用缓存
+COPY apps/backend/package*.json ./
+RUN npm install --legacy-peer-deps
+
+# 拷贝全部源码并构建
+COPY apps/backend/ .
+RUN npm run build
+
+# 构建完成后仅保留生产依赖，减小体积
+RUN npm prune --production
+
+FROM node:18-bullseye
+
+WORKDIR /app/backend
+
+ENV NODE_ENV=production \
+    PORT=3000
+
+# 同步 npm 源，避免运行时安装失败
+RUN npm config set registry https://registry.npmmirror.com
+
+COPY --from=builder /app/backend/package*.json ./
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY --from=builder /app/backend/dist ./dist
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD node -e "fetch('http://127.0.0.1:3000/api/docs',{method:'GET'}).then(()=>process.exit(0)).catch(()=>process.exit(1))"
+
+CMD ["node", "dist/main"]
+
+

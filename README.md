@@ -59,7 +59,22 @@
 
 两个应用彼此独立，可分别安装依赖并执行开发/构建命令。
 
+## Docker 部署
+
+- `infra/docker`：包含 Node 后端、前端构建镜像与 `docker-compose.yml`、`build.sh`。
+- `infra/nginx`：提供静态站点与反向代理所需的 `nginx.conf`、`multique.conf`。
+
+### 快速使用
+
+```bash
+cd infra/docker
+./build.sh          # 构建全部镜像（如需，可加 --no-cache）
+docker-compose up -d
+```
+
+- 默认暴露的端口：`8881`（NestJS 后端）、`8882`（静态前端）、`88`（总入口反向代理）。
+- Python 相关组件维持 3.9 版本（参见 `libs/framework`），前后端皆基于 Node 18，便于统一依赖链。
+
 ## 后续规划
 
-- 在 `infra/` 内补充统一的 Docker/CI 配置。
 - 视需要在 `libs/python-shared` 下增加跨语言共享组件（如 TS 类型定义）。
