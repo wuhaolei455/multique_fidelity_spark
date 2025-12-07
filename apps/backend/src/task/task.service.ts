@@ -17,14 +17,6 @@ export class TaskService {
     @Inject(forwardRef(() => TaskGateway))
     private readonly taskGateway: TaskGateway,
   ) {
-    // Revert to 3 levels up, assuming dist/task/task.service.js -> dist/task -> dist -> backend -> app? 
-    // Wait: dist/task/task.service.js
-    // __dirname = .../dist/task
-    // .. -> .../dist
-    // .. -> .../backend
-    // .. -> .../app (if backend is in app)
-    
-    // Let's use 3 levels as it was before, but log it.
     this.projectRoot = path.resolve(__dirname, '..', '..', '..');
     this.logger.log(`TaskService initialized.`);
     this.logger.log(`__dirname: ${__dirname}`);
@@ -284,7 +276,7 @@ export class TaskService {
       env?: Record<string, string>;
     },
   ): Promise<number> {
-    const startScriptPath = path.join(this.frameworkRoot, 'start.sh');
+    const startScriptPath = path.join(this.projectRoot, 'start_framework.sh');
 
     if (!fs.existsSync(startScriptPath)) {
       throw new NotFoundException(`启动脚本不存在: ${startScriptPath}`);

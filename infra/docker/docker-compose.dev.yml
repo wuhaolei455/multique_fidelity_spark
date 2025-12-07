@@ -18,6 +18,8 @@ services:
       - ../../configs:/app/configs
       - ../../holly:/app/holly
       - ../../results:/app/results
+      # Mount start script
+      - ../../start_framework.sh:/app/start_framework.sh
       # Keep node_modules from the container
       - /app/backend/node_modules
     environment:

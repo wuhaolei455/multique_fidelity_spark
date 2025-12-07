@@ -1,1 +1,0 @@
-{"hyperparameters": [{"name": "spark.executor.memory", "type": "int", "log": false, "lower": 1, "upper": 10, "default": 4}]}

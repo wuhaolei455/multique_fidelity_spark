@@ -27,7 +27,7 @@ const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
     if (cachedContent && cachedNames) {
       setHistoryPreview(cachedContent);
       const names = cachedNames.split(',').map((name: string) => name.trim()).filter(Boolean);
-      setHistoryFiles(names.map((name) => ({ name, size: cachedContent.length })));
+      setHistoryFiles(names.map((name: string) => ({ name, size: cachedContent.length })));
     }
   }, [form]);
 

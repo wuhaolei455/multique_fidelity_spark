@@ -15,6 +15,7 @@ services:
       - ../../holly:/app/holly
       - ../../results:/app/results
       - ../../libs:/app/libs
+      - ../../start_framework.sh:/app/start_framework.sh
     environment:
       - NODE_ENV=production
       - HOST_IP=${HOST_IP}

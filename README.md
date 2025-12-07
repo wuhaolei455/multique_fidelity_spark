@@ -18,16 +18,64 @@
 
 ### Python 框架 (`libs/framework`)
 
-该目录完整保留了原 root 下的 Python 代码，包括：
+该目录是一个 **git submodule**，指向独立的框架仓库：`https://github.com/Elubrazione/multique_fidelity_spark.git`
+
+框架代码包括：
 
 - `Advisor/`, `Evaluator/`, `Optimizer/`, `extensions/`, `utils/`
 - `manager/`, `configs/`, `exps/`
 - 入口脚本 `main.py`、启动脚本 `start.sh`
 - `requirements.txt`
 
-**注意：** 框架代码在迁移过程中未做任何修改，仅调整了物理位置。
+#### 首次克隆仓库后初始化 submodule
 
-## 运行方式
+```bash
+# 克隆主仓库（包含 submodule）
+git clone --recursive https://github.com/wuhaolei455/multique_fidelity_spark.git
+
+# 或者如果已经克隆了主仓库，需要初始化 submodule
+git submodule update --init --recursive
+```
+
+#### 更新 submodule 到最新版本
+
+```bash
+cd libs/framework
+git pull origin main
+cd ../..
+git add libs/framework
+git commit -m "更新 framework submodule"
+```
+
+#### 切换到 submodule 的特定版本
+
+```bash
+cd libs/framework
+git checkout <commit-hash-or-branch>
+cd ../..
+git add libs/framework
+git commit -m "切换到 framework 特定版本"
+```
+
+## 开发环境快速启动
+
+推荐使用根目录下的 `start_dev.sh` 脚本，一键启动包含前后端的开发环境，支持**热更新**。
+
+```bash
+./start_dev.sh          # 启动开发环境（后台运行）
+./start_dev.sh logs     # 查看实时日志
+./start_dev.sh down     # 停止服务并移除容器
+```
+
+- **热更新说明**：
+  - 前端 (`apps/frontend`) 和 后端 (`apps/backend`) 的源代码已通过 Volume 挂载到容器中。
+  - 修改代码后，服务会自动重新编译或刷新，无需重启容器。
+  - 前端服务地址：`http://localhost:8882`
+  - 后端服务地址：`http://localhost:8881`
+
+## Python 框架运行方式 (手动)
+
+如果仅需调试 Python 算法框架，可单独运行：
 
 1. 安装依赖
    ```bash
@@ -42,9 +90,7 @@
      --iter_num 10 \
      --task demo_task
    ```
-
-   - 如果需要跨目录调用，可将 `PYTHONPATH` 指向 `libs/framework`，例如  
-     `PYTHONPATH=/path/to/multique_fidelity_spark/libs/framework`.
+   - 如果需要跨目录调用，可将 `PYTHONPATH` 指向 `libs/framework`。
 
 3. 使用启动脚本
    ```bash
@@ -52,28 +98,36 @@
    ./start.sh my_task_name
    ```
 
-## 前后端应用
+## 生产环境部署
 
-- `apps/frontend`: 典型 React 工程，包含 `package.json`、`src/`、`tests` 等。
-- `apps/backend`: NestJS 服务，目录结构与 Nest CLI 兼容。
+使用 Docker 容器化部署生产环境，由 Nginx 统一代理。
 
-两个应用彼此独立，可分别安装依赖并执行开发/构建命令。
-
-## Docker 部署
-
-- `infra/docker`：包含 Node 后端、前端构建镜像与 `docker-compose.yml`、`build.sh`。
-- `infra/nginx`：提供静态站点与反向代理所需的 `nginx.conf`、`multique.conf`。
-
-### 快速使用
+### 1. 构建与启动
 
 ```bash
 cd infra/docker
-./build.sh          # 构建全部镜像（如需，可加 --no-cache）
-docker-compose up -d
+./build.sh              # 构建生产镜像
+docker-compose up -d    # 启动生产环境
 ```
 
-- 默认暴露的端口：`8881`（NestJS 后端）、`8882`（静态前端）、`88`（总入口反向代理）。
-- Python 相关组件维持 3.9 版本（参见 `libs/framework`），前后端皆基于 Node 18，便于统一依赖链。
+- 默认暴露端口：
+  - `88`：统一访问入口（Nginx 反向代理）
+  - `8881`：后端 API 服务
+  - `8882`：前端静态资源
+
+### 2. 停止与清理
+
+如需停止服务并删除相关容器（清理环境），请在 `infra/docker` 目录下执行：
+
+```bash
+cd infra/docker
+docker-compose down
+```
+
+### 3. 注意事项
+- 生产环境镜像不包含源码挂载，修改代码后需要重新执行 `./build.sh`。
+- Python 组件运行在后端容器中，维持 Python 3.9 环境。
+- 前后端均基于 Node 18 构建。
 
 ## UI 任务上传与目录规范
 

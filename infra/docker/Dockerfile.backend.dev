@@ -21,6 +21,12 @@ RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list && \
 COPY libs/framework/requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
+ENV SKIP_VENV=true
+
+# Copy start script (fallback if not mounted)
+COPY start_framework.sh /app/start_framework.sh
+RUN chmod +x /app/start_framework.sh
+
 # 暴露端口
 EXPOSE 3001
 ENV PORT=3001

@@ -1,0 +1,3 @@
+[submodule "libs/framework"]
+	path = libs/framework
+	url = https://github.com/Elubrazione/multique_fidelity_spark.git

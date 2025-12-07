@@ -28,7 +28,8 @@ RUN pip3 install -r /tmp/requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/s
 WORKDIR /app/backend
 
 ENV NODE_ENV=production \
-    PORT=3001
+    PORT=3001 \
+    SKIP_VENV=true
 
 # 同步 npm 源，避免运行时安装失败
 RUN npm config set registry https://registry.npmmirror.com
@@ -36,6 +37,11 @@ RUN npm config set registry https://registry.npmmirror.com
 COPY --from=builder /app/backend/package*.json ./
 COPY --from=builder /app/backend/node_modules ./node_modules
 COPY --from=builder /app/backend/dist ./dist
+
+# Copy framework code and start script
+COPY libs /app/libs
+COPY start_framework.sh /app/start_framework.sh
+RUN chmod +x /app/start_framework.sh
 
 EXPOSE 3001
 
