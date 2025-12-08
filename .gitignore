@@ -2,3 +2,4 @@ holly
 results
 .venv
 .cache./
+config.env

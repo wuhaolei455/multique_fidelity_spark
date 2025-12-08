@@ -46,6 +46,27 @@ check_requirements() {
   fi
 }
 
+# 加载配置
+load_config() {
+  local CONFIG_FILE="$PROJECT_DIR/config.env"
+  
+  if [ -f "$CONFIG_FILE" ]; then
+    print_info "加载配置文件: $CONFIG_FILE"
+    set -a
+    source "$CONFIG_FILE"
+    set +a
+  else
+    print_warning "未找到配置文件 config.env，将尝试默认值。"
+  fi
+
+  if [[ -z "$HOST_IP" ]]; then
+    print_warning "未配置 HOST_IP，将尝试自动探测..."
+    detect_host_ip
+  else
+    print_info "使用配置 IP: $HOST_IP"
+  fi
+}
+
 # 探测主机 IP
 detect_host_ip() {
   print_info "正在探测主机 IP..."
@@ -53,10 +74,12 @@ detect_host_ip() {
   
   # 尝试多个公网 IP 获取服务
   local services=(
-    "http://icanhazip.com"
+    "http://checkip.amazonaws.com"
     "http://ifconfig.me"
+    "http://icanhazip.com"
     "http://ifconfig.co"
     "http://ipinfo.io/ip"
+    "https://api.ipify.org"
   )
   
   for service in "${services[@]}"; do
@@ -85,7 +108,7 @@ detect_host_ip() {
   if [[ -z "$HOST_IP" ]]; then
      HOST_IP="127.0.0.1"
   fi
-  print_info "使用 IP: $HOST_IP"
+  print_info "使用探测到的 IP: $HOST_IP"
   export HOST_IP
 }
 
@@ -114,7 +137,7 @@ prepare_directories() {
 # 启动服务
 do_up() {
   check_requirements
-  detect_host_ip
+  load_config
   prepare_directories
   
   print_info "正在启动开发环境 (后台运行)..."

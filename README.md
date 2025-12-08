@@ -57,6 +57,95 @@ git add libs/framework
 git commit -m "切换到 framework 特定版本"
 ```
 
+## 环境准备
+
+本项目提供了一个自动化初始化脚本，可一键安装 Docker、Docker Compose 并配置镜像加速。
+
+### 1. 自动初始化 (推荐)
+
+运行以下脚本（需 root 权限）：
+
+```bash
+# 赋予执行权限
+chmod +x infra/scripts/init_docker.sh
+
+# 运行初始化脚本
+sudo ./infra/scripts/init_docker.sh
+```
+
+该脚本会自动执行以下操作：
+- 安装 Docker Engine (通过官方脚本)
+- 安装 Docker Compose (v2.29.1)
+- 配置 `/etc/docker/daemon.json` 使用国内镜像加速源
+
+安装完成后，请确保您的用户已加入 `docker` 组（脚本会提示相关命令），或者注销并重新登录。
+
+### 2. 手动安装 (备选)
+
+如果自动脚本执行失败，请参考以下步骤手动安装。
+
+#### 安装 Docker (推荐 20.10.x 及以上)
+
+```bash
+# 使用官方脚本自动安装 (Ubuntu/Debian/CentOS)
+curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+
+# 启动 Docker 并设置开机自启
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+### 2. 安装 Docker Compose (推荐 v2.x 版本)
+
+本项目依赖 `version: '3.8'` 的 Compose 文件格式，建议使用 Docker Compose v2.20.0 或更高版本。
+
+```bash
+# 下载指定版本 (以 v2.29.1 为例)
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# 添加执行权限
+sudo chmod +x /usr/local/bin/docker-compose
+
+# 验证安装
+docker-compose --version
+```
+
+### 3. 配置 Docker 镜像加速 (国内环境)
+
+为了提高镜像拉取速度，建议配置国内镜像源。
+
+```bash
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io",
+    "https://huecker.io",
+    "https://dockerhub.timeweb.cloud",
+    "https://noohub.ru"
+  ]
+}
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+### 4. 获取公网 IP
+
+在部署服务时需要准确配置宿主机的公网 IP（`HOST_IP`）。如果自动检测不准确，可以使用以下命令手动获取：
+
+```bash
+# 方式 1 (推荐)
+curl -s ifconfig.me
+
+# 方式 2
+curl -s icanhazip.com
+
+# 方式 3
+curl -s ipinfo.io/ip
+```
+
 ## 开发环境快速启动
 
 推荐使用根目录下的 `start_dev.sh` 脚本，一键启动包含前后端的开发环境，支持**热更新**。
