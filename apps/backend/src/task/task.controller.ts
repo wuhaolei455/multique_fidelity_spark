@@ -34,6 +34,18 @@ export class TaskController {
     return this.taskService.launchFrameworkTask(launchDto);
   }
 
+  @Post('launch-framework')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: '启动框架任务 (别名)' })
+  @ApiResponse({
+    status: 201,
+    description: '任务创建成功',
+    type: CreateTaskResponseDto,
+  })
+  async launchFramework(@Body() launchDto: LaunchFrameworkTaskDto): Promise<CreateTaskResponseDto> {
+    return this.taskService.launchFrameworkTask(launchDto);
+  }
+
   @Post(':taskId/start')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '启动已创建的任务' })

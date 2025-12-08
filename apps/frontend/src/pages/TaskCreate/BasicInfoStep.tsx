@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Alert, Divider, InputNumber, Row, Col, Select } from 'antd';
+import { Form, Input, Alert, Divider, InputNumber, Row, Col, Select, Switch } from 'antd';
 import type { FormInstance } from 'antd';
 
 interface BasicInfoStepProps {
@@ -49,9 +49,9 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ form }) => {
         />
       </Form.Item>
 
-      <Divider orientation="left">运行参数</Divider>
+      <Divider orientation="left">运行配置</Divider>
       <Row gutter={16}>
-        <Col span={8}>
+        <Col span={6}>
           <Form.Item
             name="iterNum"
             label="迭代次数"
@@ -60,7 +60,7 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ form }) => {
             <InputNumber min={1} {...numberProps} />
           </Form.Item>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Form.Item
             name="database"
             label="数据库"
@@ -69,7 +69,7 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ form }) => {
             <Input placeholder="tpcds_100g" />
           </Form.Item>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Form.Item
             name="similarityThreshold"
             label="相似度阈值"
@@ -78,28 +78,25 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ form }) => {
             <InputNumber min={0} max={1} step={0.05} {...numberProps} />
           </Form.Item>
         </Col>
-      </Row>
-
-      <Row gutter={16}>
-        <Col span={8}>
+        <Col span={6}>
           <Form.Item name="target" label="目标标识">
             <Input placeholder="tpcds_100g" />
           </Form.Item>
         </Col>
-        <Col span={8}>
+      </Row>
+
+      <Row gutter={16}>
+        <Col span={6}>
           <Form.Item name="seed" label="随机种子">
             <InputNumber min={0} {...numberProps} />
           </Form.Item>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Form.Item name="randProb" label="随机概率">
             <InputNumber min={0} max={1} step={0.01} {...numberProps} />
           </Form.Item>
         </Col>
-      </Row>
-
-      <Row gutter={16}>
-        <Col span={8}>
+        <Col span={6}>
           <Form.Item name="randMode" label="随机模式">
             <Select
               options={[
@@ -109,19 +106,85 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ form }) => {
             />
           </Form.Item>
         </Col>
-        <Col span={8}>
-          <Form.Item name="compress" label="压缩策略">
-            <Input placeholder="shap / none / expert" />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name="cpStrategy" label="CP 策略">
-            <Input placeholder="none/shap/llamatune" />
+        <Col span={6}>
+          <Form.Item name="testMode" label="测试模式" valuePropName="checked">
+            <Switch checkedChildren="开启" unCheckedChildren="关闭" />
           </Form.Item>
         </Col>
       </Row>
 
       <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item name="opt" label="优化器算法">
+            <Select
+              options={[
+                { label: 'MFES_SMAC', value: 'MFES_SMAC' },
+                { label: 'BOHB_GP', value: 'BOHB_GP' },
+                { label: 'BOHB_SMAC', value: 'BOHB_SMAC' },
+                { label: 'MFES_GP', value: 'MFES_GP' },
+                { label: 'SMAC', value: 'SMAC' },
+                { label: 'GP', value: 'GP' },
+                { label: 'LLAMATUNE_SMAC', value: 'LLAMATUNE_SMAC' },
+                { label: 'LLAMATUNE_GP', value: 'LLAMATUNE_GP' },
+                { label: 'REMBO_SMAC', value: 'REMBO_SMAC' },
+                { label: 'REMBO_GP', value: 'REMBO_GP' },
+                { label: 'HESBO_SMAC', value: 'HESBO_SMAC' },
+                { label: 'HESBO_GP', value: 'HESBO_GP' },
+              ]}
+            />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name="logLevel" label="日志级别">
+            <Select
+              options={[
+                { label: 'INFO', value: 'info' },
+                { label: 'DEBUG', value: 'debug' },
+              ]}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Divider orientation="left">迁移学习与热启动</Divider>
+      <Row gutter={16}>
+        <Col span={6}>
+          <Form.Item name="tlTopk" label="迁移学习 TopK">
+            <InputNumber min={0} {...numberProps} />
+          </Form.Item>
+        </Col>
+        <Col span={6}>
+          <Form.Item name="wsInitNum" label="WS 初始样本">
+            <InputNumber min={0} {...numberProps} />
+          </Form.Item>
+        </Col>
+        <Col span={6}>
+          <Form.Item name="wsTopk" label="WS TopK">
+            <InputNumber min={0} {...numberProps} />
+          </Form.Item>
+        </Col>
+        <Col span={6}>
+          <Form.Item name="wsInnerSurrogateModel" label="WS 内部模型">
+            <Input placeholder="prf" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Divider orientation="left">压缩与 CP 配置</Divider>
+      <Row gutter={16}>
+        <Col span={6}>
+          <Form.Item name="compress" label="压缩策略">
+            <Select
+              placeholder="选择压缩策略"
+              options={[
+                { label: 'none', value: 'none' },
+                { label: 'shap', value: 'shap' },
+                { label: 'expert', value: 'expert' },
+                { label: 'llamatune', value: 'llamatune' },
+              ]}
+            />
+          </Form.Item>
+        </Col>
         <Col span={6}>
           <Form.Item name="cpTopk" label="CP TopK">
             <InputNumber min={1} {...numberProps} />
@@ -137,38 +200,16 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ form }) => {
             <InputNumber min={0} max={1} step={0.05} {...numberProps} />
           </Form.Item>
         </Col>
-        <Col span={6}>
-          <Form.Item name="tlTopk" label="迁移学习 TopK">
-            <InputNumber min={0} {...numberProps} />
-          </Form.Item>
-        </Col>
       </Row>
 
+      <Divider orientation="left">调度器配置</Divider>
       <Row gutter={16}>
-        <Col span={6}>
-          <Form.Item name="wsInitNum" label="Warm Start 初始样本">
-            <InputNumber min={0} {...numberProps} />
-          </Form.Item>
-        </Col>
-        <Col span={6}>
-          <Form.Item name="wsTopk" label="Warm Start TopK">
-            <InputNumber min={0} {...numberProps} />
-          </Form.Item>
-        </Col>
-        <Col span={6}>
-          <Form.Item name="wsInnerSurrogateModel" label="Warm Start 模型">
-            <Input placeholder="prf" />
-          </Form.Item>
-        </Col>
-        <Col span={6}>
+        <Col span={12}>
           <Form.Item name="schedulerR" label="Scheduler R">
             <InputNumber min={1} {...numberProps} />
           </Form.Item>
         </Col>
-      </Row>
-
-      <Row gutter={16}>
-        <Col span={6}>
+        <Col span={12}>
           <Form.Item name="schedulerEta" label="Scheduler η">
             <InputNumber min={1} {...numberProps} />
           </Form.Item>

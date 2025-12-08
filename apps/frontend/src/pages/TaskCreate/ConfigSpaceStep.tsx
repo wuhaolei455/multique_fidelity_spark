@@ -59,24 +59,7 @@ const ConfigSpaceStep: React.FC<ConfigSpaceStepProps> = ({ form }) => {
     setIsProcessing(true);
     try {
       const text = await file.text();
-      let parsed;
-      try {
-        parsed = JSON.parse(text);
-      } catch (error) {
-        // 尝试兼容处理 Infinity 和 NaN
-        try {
-          const fixedText = text.replace(
-            /"(?:\\.|[^"\\])*"|(-?Infinity)|(NaN)/g,
-            (match) => {
-              if (match.startsWith('"')) return match;
-              return `"${match}"`;
-            }
-          );
-          parsed = JSON.parse(fixedText);
-        } catch (fixError) {
-          throw error;
-        }
-      }
+      const parsed = JSON.parse(text);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         throw new Error('配置空间必须是一个 JSON 对象');
       }

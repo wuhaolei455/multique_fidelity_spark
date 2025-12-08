@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Steps, Button, message, Form } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { launchFrameworkTask, createFrameworkTask, startTask, LaunchFrameworkPayload } from '@/services/api/taskApi';
+import { createFrameworkTask, startTask, LaunchFrameworkPayload } from '@/services/api/taskApi';
 import BasicInfoStep from './BasicInfoStep';
 import EvaluatorScriptStep from './EvaluatorScriptStep';
 import ConfigSpaceStep from './ConfigSpaceStep';
@@ -20,6 +20,9 @@ const DEFAULT_FORM_VALUES = {
   seed: 42,
   randProb: 0.15,
   randMode: 'ran',
+  opt: 'MFES_SMAC',
+  logLevel: 'info',
+  testMode: false,
   compress: 'shap',
   cpStrategy: 'none',
   cpTopk: 40,
@@ -58,8 +61,12 @@ const TaskCreate: React.FC = () => {
       'database',
       'similarityThreshold',
       'target',
-      'compress',
-      'cpStrategy',
+      'randProb',
+      'randMode',
+      'opt',
+      'logLevel',
+      'testMode',
+      'compress',      'cpStrategy',
       'cpTopk',
       'cpSigma',
       'cpTopRatio',
@@ -141,8 +148,11 @@ const TaskCreate: React.FC = () => {
         seed: values.seed,
         randProb: values.randProb,
         randMode: values.randMode,
+        opt: values.opt,
+        logLevel: values.logLevel,
+        testMode: values.testMode,
         compress: values.compress,
-        cpStrategy: values.cpStrategy,
+        cpStrategy: values.compress, // Use compress as cpStrategy
         cpTopk: values.cpTopk,
         cpSigma: values.cpSigma,
         cpTopRatio: values.cpTopRatio,

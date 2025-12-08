@@ -39,8 +39,29 @@ install_docker() {
         docker --version
     else
         print_info "正在安装 Docker..."
-        # 使用阿里云镜像源加速安装脚本下载
-        curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+        
+        # 检测是否为 OpenEuler
+        if [ -f /etc/os-release ] && grep -qi "openeuler" /etc/os-release; then
+            print_info "检测到 OpenEuler 系统，使用兼容模式安装..."
+            
+            # 移除旧版本（如果有）
+            if command -v yum >/dev/null 2>&1; then
+                yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine || true
+            fi
+
+            # 添加阿里云 Docker-CE 源 (使用 CentOS 8 的源作为兼容)
+            curl -o /etc/yum.repos.d/docker-ce.repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+            
+            # 将 $releasever 替换为 8，因为 OpenEuler 兼容 CentOS 8
+            sed -i 's/$releasever/8/g' /etc/yum.repos.d/docker-ce.repo
+            
+            # 安装 Docker
+            yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            
+        else
+            # 使用阿里云镜像源加速安装脚本下载
+            curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+        fi
         
         systemctl enable docker
         systemctl start docker

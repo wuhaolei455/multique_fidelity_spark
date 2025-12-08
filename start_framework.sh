@@ -1,15 +1,21 @@
 #!/bin/bash
 
-# 调优启动脚本
-
 # 接收任务名称参数
 TASK_NAME=${1:-"default_task"}
 CONFIG_PATH="${CONFIG_PATH:-configs/base.yaml}"
 ITER_NUM="${ITER_NUM:-10}"
 HISTORY_DIR="${HISTORY_DIR:-mock/history}"
-SAVE_DIR="${SAVE_DIR:-results/waterfall_results/}"
+SAVE_DIR="${SAVE_DIR:-results/spark_results/}"
 COMPRESS="${COMPRESS:-shap}"
 CP_TOPK="${CP_TOPK:-40}"
+OPT="${OPT:-MFES_SMAC}"
+LOG_LEVEL="${LOG_LEVEL:-info}"
+# TEST_MODE env var: "true" to enable, otherwise disable (or check if set)
+TEST_MODE_FLAG=""
+if [ "$TEST_MODE" = "true" ]; then
+    TEST_MODE_FLAG="--test_mode"
+fi
+
 
 # 工作目录与依赖路径
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -77,30 +83,35 @@ else
     echo "⚠️  跳过虚拟环境设置 (SKIP_VENV=true)"
 fi
 
+
 echo "=========================================="
-echo "🚀 启动瀑布流组件调优任务"
+echo "🚀 启动调优任务"
 echo "=========================================="
 echo ""
 echo "📋 任务名称: $TASK_NAME"
 echo "📄 配置文件: $CONFIG_PATH"
 echo "📂 历史目录: $HISTORY_DIR"
 echo "💾 结果目录: $SAVE_DIR"
+echo "⚙️  优化器:   $OPT"
+echo "📝 日志级别: $LOG_LEVEL"
+echo "🧪 测试模式: $TEST_MODE"
 echo ""
 echo "=========================================="
 
 python3 "$MAIN_PATH" \
     --config "$CONFIG_PATH" \
-    --test_mode \
+    $TEST_MODE_FLAG \
     --iter_num "$ITER_NUM" \
     --task "$TASK_NAME" \
     --history_dir "$HISTORY_DIR" \
     --save_dir "$SAVE_DIR" \
     --compress "$COMPRESS" \
-    --cp_topk "$CP_TOPK"
+    --cp_topk "$CP_TOPK" \
+    --opt "$OPT" \
+    --log_level "$LOG_LEVEL"
 
 
 echo ""
 echo "=========================================="
 echo "✅ 调优任务完成！"
-echo "📁 结果保存在: $SAVE_DIR"
 echo "=========================================="

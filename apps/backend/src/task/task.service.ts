@@ -364,10 +364,17 @@ export class TaskService {
           
           // 如果有客户端订阅，推送日志
           if (this.taskGateway.hasSubscribers(taskId)) {
-            this.logger.debug(`推送 stderr 日志: ${content.substring(0, 50)}`);
+            // 检查日志内容，如果是 INFO 或 WARN 级别，即使来自 stderr 也视为 stdout
+            let type: 'stdout' | 'stderr' = 'stderr';
+            const upperContent = content.toUpperCase();
+            if (upperContent.includes('INFO') || upperContent.includes('WARN')) {
+              type = 'stdout';
+            }
+
+            this.logger.debug(`推送 ${type} (origin stderr) 日志: ${content.substring(0, 50)}`);
             this.taskGateway.emitTaskLog({
               taskId,
-              type: 'stderr',
+              type,
               content,
               timestamp: new Date().toISOString(),
             });
@@ -690,6 +697,9 @@ export class TaskService {
       DATA_DIR: paths.dataDir,
       COMPRESS: dto.compress ?? 'shap',
       CP_TOPK: String(dto.cpTopk ?? 40),
+      OPT: dto.opt ?? 'MFES_SMAC',
+      LOG_LEVEL: dto.logLevel ?? 'info',
+      TEST_MODE: dto.testMode ? 'true' : 'false',
     };
 
     if (dataFilePath) {

@@ -148,6 +148,20 @@ export class LaunchFrameworkTaskDto {
   @IsIn(['ran', 'rs'])
   randMode?: 'ran' | 'rs';
 
+  @ApiPropertyOptional({ description: '优化器', default: 'MFES_SMAC' })
+  @IsOptional()
+  @IsString()
+  opt?: string;
+
+  @ApiPropertyOptional({ description: '日志级别', default: 'info', enum: ['info', 'debug'] })
+  @IsOptional()
+  @IsIn(['info', 'debug'])
+  logLevel?: 'info' | 'debug';
+
+  @ApiPropertyOptional({ description: '测试模式', default: false })
+  @IsOptional()
+  testMode?: boolean;
+
   @ApiPropertyOptional({ description: 'Warm Start 初始样本数量', default: 4 })
   @IsOptional()
   @IsNumber()

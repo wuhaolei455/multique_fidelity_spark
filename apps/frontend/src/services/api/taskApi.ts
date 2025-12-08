@@ -28,6 +28,9 @@ export interface LaunchFrameworkPayload {
   seed?: number;
   randProb?: number;
   randMode?: 'ran' | 'rs';
+  opt?: string;
+  logLevel?: 'info' | 'debug';
+  testMode?: boolean;
   wsInitNum?: number;
   wsTopk?: number;
   wsInnerSurrogateModel?: string;
@@ -172,15 +175,6 @@ export const startTask = (taskId: string) => {
   return request<void>({
     url: `/tasks/${taskId}/start`,
     method: 'POST',
-  });
-};
-
-export const launchFrameworkTask = (data: LaunchFrameworkPayload) => {
-  // Deprecated: Use createFrameworkTask + startTask instead
-  return request({
-    url: '/tasks/launch-framework',
-    method: 'POST',
-    data,
   });
 };
 
