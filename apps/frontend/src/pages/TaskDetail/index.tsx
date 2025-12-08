@@ -4,10 +4,10 @@
 
 import React, { useEffect } from 'react';
 import { Card, Tabs, Button, Space, Tag, Descriptions, message } from 'antd';
-import { ArrowLeftOutlined, StopOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/hooks/useAppDispatch';
-import { fetchTaskDetail, updateTaskStatus } from '@/store/slices/taskSlice';
+import { fetchTaskDetail } from '@/store/slices/taskSlice';
 import { TASK_STATUS_COLORS, TASK_STATUS_TEXT } from '@/utils/constants';
 import OverviewTab from './OverviewTab';
 import MonitorTab from './MonitorTab';
@@ -27,17 +27,6 @@ const TaskDetail: React.FC = () => {
       dispatch(fetchTaskDetail(taskId));
     }
   }, [dispatch, taskId]);
-
-  const handleStop = async () => {
-    if (!taskId) return;
-    try {
-      await dispatch(updateTaskStatus({ taskId, action: 'stop' })).unwrap();
-      message.success('任务已停止');
-      dispatch(fetchTaskDetail(taskId));
-    } catch (error) {
-      message.error('停止任务失败');
-    }
-  };
 
   const handleBack = () => {
     navigate('/tasks');

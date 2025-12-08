@@ -145,9 +145,6 @@ const Dashboard: React.FC = () => {
               <Button size="large" onClick={() => navigate('/results')}>
                 结果分析
               </Button>
-              <Button size="large" onClick={() => navigate('/config')}>
-                配置管理
-              </Button>
             </Space>
           </Card>
         </Col>

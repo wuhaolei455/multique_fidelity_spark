@@ -177,10 +177,20 @@ export class LaunchFrameworkTaskDto {
   @IsString()
   wsInnerSurrogateModel?: string;
 
+  @ApiPropertyOptional({ description: 'Warm Start 策略', default: 'none' })
+  @IsOptional()
+  @IsString()
+  wsStrategy?: string;
+
   @ApiPropertyOptional({ description: '迁移学习 TopK', default: 3 })
   @IsOptional()
   @IsNumber()
   tlTopk?: number;
+
+  @ApiPropertyOptional({ description: '迁移学习策略', default: 'none' })
+  @IsOptional()
+  @IsString()
+  tlStrategy?: string;
 
   @ApiPropertyOptional({ description: '压缩策略', default: 'shap' })
   @IsOptional()
@@ -227,10 +237,20 @@ export class LaunchFrameworkTaskDto {
   @IsString()
   expertSpacePath?: string;
 
-  @ApiProperty({ description: '历史 JSON 文件内容（文本）' })
+  @ApiPropertyOptional({ description: '历史 JSON 文件内容（文本，可选）' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  historyFileContent: string;
+  historyFileContent?: string;
+
+  @ApiPropertyOptional({ description: '服务端历史文件路径（相对于 holly/history）' })
+  @IsOptional()
+  @IsString()
+  serverHistoryFile?: string;
+
+  @ApiPropertyOptional({ description: '服务端数据文件路径（相对于 holly/data）' })
+  @IsOptional()
+  @IsString()
+  serverDataFile?: string;
 
   @ApiPropertyOptional({ description: '历史 JSON 文件名' })
   @IsOptional()

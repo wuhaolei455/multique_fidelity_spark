@@ -168,10 +168,6 @@ export class TaskService {
   }
 
   async launchFrameworkTask(launchDto: LaunchFrameworkTaskDto): Promise<CreateTaskResponseDto> {
-    if (!launchDto.historyFileContent) {
-      throw new BadRequestException('history_json 文件不能为空');
-    }
-
     const taskId = this.generateTaskId(launchDto.name);
     const timestamp = new Date().toISOString();
     const taskMetaPath = path.join(this.tasksDir, `${taskId}_meta.json`);
@@ -179,21 +175,75 @@ export class TaskService {
     try {
       const resolvedPaths = this.resolveFrameworkPaths(launchDto);
 
-      const historyFilePath =
-        this.writeUploadedFile({
-          baseDir: resolvedPaths.historyDir,
-          defaultName: `${taskId}_history.json`,
-          fileName: launchDto.historyFileName,
-          content: launchDto.historyFileContent,
-          validateJson: true,
-        }) || path.join(resolvedPaths.historyDir, `${taskId}_history.json`);
+      let historyFilePath: string | undefined;
 
-      const dataFilePath = this.writeUploadedFile({
-        baseDir: resolvedPaths.dataDir,
-        defaultName: `${taskId}_data.json`,
-        fileName: launchDto.dataFileName,
-        content: launchDto.dataFileContent,
-      });
+      if (launchDto.historyFileContent) {
+        historyFilePath =
+          this.writeUploadedFile({
+            baseDir: resolvedPaths.historyDir,
+            defaultName: `${taskId}_history.json`,
+            fileName: launchDto.historyFileName,
+            content: launchDto.historyFileContent,
+            validateJson: true,
+          }) || path.join(resolvedPaths.historyDir, `${taskId}_history.json`);
+      } else if (launchDto.serverHistoryFile) {
+         let sourcePath = launchDto.serverHistoryFile;
+         if (!path.isAbsolute(sourcePath)) {
+             const relativeToHolly = path.join(this.hollyRoot, sourcePath);
+             const relativeToHistory = path.join(this.rootHistoryDir, sourcePath);
+             
+             if (fs.existsSync(relativeToHolly)) {
+                 sourcePath = relativeToHolly;
+             } else if (fs.existsSync(relativeToHistory)) {
+                 sourcePath = relativeToHistory;
+             } else {
+                 sourcePath = relativeToHolly;
+             }
+         }
+         
+         if (!fs.existsSync(sourcePath)) {
+            throw new NotFoundException(`服务端历史文件不存在: ${launchDto.serverHistoryFile}`);
+         }
+         const targetPath = path.join(resolvedPaths.historyDir, `${taskId}_history.json`);
+         this.ensureDir(resolvedPaths.historyDir);
+         fs.copyFileSync(sourcePath, targetPath);
+         historyFilePath = targetPath;
+         this.logger.log(`Copied server history file from ${sourcePath} to ${targetPath}`);
+      }
+      
+      let dataFilePath: string | undefined;
+
+      if (launchDto.dataFileContent) {
+        dataFilePath = this.writeUploadedFile({
+          baseDir: resolvedPaths.dataDir,
+          defaultName: `${taskId}_data.json`,
+          fileName: launchDto.dataFileName,
+          content: launchDto.dataFileContent,
+        });
+      } else if (launchDto.serverDataFile) {
+         let sourcePath = launchDto.serverDataFile;
+         if (!path.isAbsolute(sourcePath)) {
+             const relativeToHolly = path.join(this.hollyRoot, sourcePath);
+             const relativeToData = path.join(this.rootDataDir, sourcePath);
+             
+             if (fs.existsSync(relativeToHolly)) {
+                 sourcePath = relativeToHolly;
+             } else if (fs.existsSync(relativeToData)) {
+                 sourcePath = relativeToData;
+             } else {
+                 sourcePath = relativeToHolly;
+             }
+         }
+         
+         if (!fs.existsSync(sourcePath)) {
+            throw new NotFoundException(`服务端数据文件不存在: ${launchDto.serverDataFile}`);
+         }
+         const targetPath = path.join(resolvedPaths.dataDir, `${taskId}_data.json`);
+         this.ensureDir(resolvedPaths.dataDir);
+         fs.copyFileSync(sourcePath, targetPath);
+         dataFilePath = targetPath;
+         this.logger.log(`Copied server data file from ${sourcePath} to ${targetPath}`);
+      }
 
       // Handle huge_space.json upload if provided
       let hugeSpacePath: string | undefined;
@@ -465,6 +515,34 @@ export class TaskService {
     };
   }
 
+  async getTaskDetail(taskId: string): Promise<any> {
+    const taskMetaPath = path.join(this.tasksDir, `${taskId}_meta.json`);
+    
+    if (!fs.existsSync(taskMetaPath)) {
+      throw new NotFoundException(`任务不存在: ${taskId}`);
+    }
+
+    const taskMeta = JSON.parse(fs.readFileSync(taskMetaPath, 'utf-8'));
+    
+    // 尝试读取结果文件
+    const resultPath = path.join(this.tasksDir, taskId, 'result.json');
+    let resultData = {};
+    if (fs.existsSync(resultPath)) {
+        try {
+            resultData = JSON.parse(fs.readFileSync(resultPath, 'utf-8'));
+        } catch (e) {
+            this.logger.warn(`Failed to read result file for task ${taskId}: ${e.message}`);
+        }
+    }
+
+    // 尝试读取日志文件内容（可选，或者只返回路径）
+    // 这里简单返回元数据和结果数据
+    return {
+        ...taskMeta,
+        result: resultData
+    };
+  }
+
   async listTasks(): Promise<Task[]> {
     const tasks: Task[] = [];
 
@@ -488,6 +566,45 @@ export class TaskService {
 
     // 按创建时间倒序排序
     return tasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  listServerFiles(type: 'history' | 'data', customPath?: string): string[] {
+    // 如果提供了自定义路径，则直接使用
+    // 如果未提供，则使用默认目录
+    let targetDir = customPath;
+    
+    if (!targetDir) {
+        targetDir = type === 'history' ? this.rootHistoryDir : this.rootDataDir;
+    }
+
+    // 支持绝对路径或相对路径
+    if (!path.isAbsolute(targetDir)) {
+        // 相对路径相对于 hollyRoot
+        targetDir = path.resolve(this.hollyRoot, targetDir);
+    }
+
+    if (!fs.existsSync(targetDir)) {
+      return [];
+    }
+    
+    // 递归获取文件？或者只获取一层？这里只获取一层，且过滤 json/txt 等
+    // 简单起见，读取目录下所有文件
+    try {
+      const files = fs.readdirSync(targetDir).filter(file => {
+          try {
+            const stat = fs.statSync(path.join(targetDir!, file));
+            return stat.isFile() && !file.startsWith('.'); // 忽略隐藏文件
+          } catch (e) {
+            return false;
+          }
+      });
+      // 返回完整绝对路径，或者相对于 holly 的路径？
+      // 为了方便前端再次提交，我们返回文件的完整绝对路径
+      return files.map(file => path.join(targetDir!, file));
+    } catch (error) {
+      this.logger.error(`Failed to list server files in ${targetDir}: ${error.message}`);
+      return [];
+    }
   }
 
   private resolveFrameworkPaths(dto: LaunchFrameworkTaskDto): FrameworkResolvedPaths {
@@ -621,6 +738,7 @@ export class TaskService {
       init_num: dto.wsInitNum ?? wsArgs.init_num ?? 4,
       topk: dto.wsTopk ?? wsArgs.topk ?? 4,
       inner_surrogate_model: dto.wsInnerSurrogateModel ?? wsArgs.inner_surrogate_model ?? 'prf',
+      strategy: dto.wsStrategy ?? wsArgs.strategy ?? 'none',
     };
 
     // TL Args
@@ -628,6 +746,7 @@ export class TaskService {
     baseConfig.method_args.tl_args = {
       ...tlArgs,
       topk: dto.tlTopk ?? tlArgs.topk ?? 3,
+      strategy: dto.tlStrategy ?? tlArgs.strategy ?? 'none',
     };
 
     // CP Args

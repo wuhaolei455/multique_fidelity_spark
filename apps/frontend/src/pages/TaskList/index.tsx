@@ -18,13 +18,11 @@ import {
   PlusOutlined,
   ReloadOutlined,
   EyeOutlined,
-  DeleteOutlined,
-  CopyOutlined,
   MonitorOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/hooks/useAppDispatch';
-import { fetchTasks, deleteTask, setQuery } from '@/store/slices/taskSlice';
+import { fetchTasks, setQuery } from '@/store/slices/taskSlice';
 import { TASK_STATUS_COLORS, TASK_STATUS_TEXT, METHOD_TEXT } from '@/utils/constants';
 import { formatDateTime } from '@/utils/format';
 import type { Task, TaskStatus, OptimizationMethod } from '@/types';
@@ -69,17 +67,6 @@ const TaskList: React.FC = () => {
   // 刷新
   const handleRefresh = () => {
     dispatch(fetchTasks(query));
-  };
-
-  // 删除任务
-  const handleDelete = async (taskId: string) => {
-    try {
-      await dispatch(deleteTask(taskId)).unwrap();
-      message.success('任务已删除');
-      dispatch(fetchTasks(query));
-    } catch (error) {
-      message.error('删除任务失败');
-    }
   };
 
   // 表格列
@@ -192,16 +179,6 @@ const TaskList: React.FC = () => {
           >
             监控
           </Button>
-          <Popconfirm
-            title="确定删除此任务吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
         </Space>
       ),
     },

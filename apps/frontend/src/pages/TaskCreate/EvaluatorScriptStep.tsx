@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Button, Card, Form, Input, Space, Tag, Typography, Upload, message } from 'antd';
+import { Alert, Button, Card, Form, Input, Space, Tag, Typography, Upload, message, Radio, Select, Divider } from 'antd';
 import type { FormInstance } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
+import { InboxOutlined, CloudServerOutlined, UploadOutlined } from '@ant-design/icons';
+import { getServerFiles } from '@/services/api/taskApi';
 
 interface HistoryUploadStepProps {
   form: FormInstance;
@@ -19,10 +20,51 @@ const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
   const [historyPreview, setHistoryPreview] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
   const [parsingHistory, setParsingHistory] = useState(false);
+  const [historySource, setHistorySource] = useState<'local' | 'server'>('local');
+  const [dataSource, setDataSource] = useState<'local' | 'server'>('local');
+  const [serverHistoryFiles, setServerHistoryFiles] = useState<string[]>([]);
+  const [serverDataFiles, setServerDataFiles] = useState<string[]>([]);
+  const [loadingServerFiles, setLoadingServerFiles] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const historyDir = Form.useWatch('serverHistoryDir', form);
+  const dataDir = Form.useWatch('serverDataDir', form);
+
+  useEffect(() => {
+    // 加载服务端文件列表
+    const fetchFiles = async () => {
+      setLoadingServerFiles(true);
+      try {
+        const [history, data] = await Promise.all([
+          getServerFiles('history', historyDir),
+          getServerFiles('data', dataDir)
+        ]);
+        setServerHistoryFiles(history);
+        setServerDataFiles(data);
+      } catch (error) {
+        console.error('Failed to load server files:', error);
+        setServerHistoryFiles([]);
+        setServerDataFiles([]);
+      } finally {
+        setLoadingServerFiles(false);
+      }
+    };
+    // 防抖或直接调用，这里直接调用
+    const timer = setTimeout(fetchFiles, 500);
+    return () => clearTimeout(timer);
+  }, [historyDir, dataDir]);
 
   useEffect(() => {
     const cachedContent = form.getFieldValue('historyFileContent');
+    const cachedServerFile = form.getFieldValue('serverHistoryFile');
+    
+    if (cachedServerFile) {
+      setHistorySource('server');
+    } else if (cachedContent) {
+      setHistorySource('local');
+    }
+
     const cachedNames = form.getFieldValue('historyFileName');
     if (cachedContent && cachedNames) {
       setHistoryPreview(cachedContent);
@@ -140,7 +182,6 @@ const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
     <div>
       <Form.Item
         name="historyFileContent"
-        rules={[{ required: true, message: '请上传历史 JSON 文件' }]}
         style={{ display: 'none' }}
       >
         <Input.TextArea />
@@ -151,14 +192,56 @@ const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
 
       <Alert
         message="步骤三：上传历史数据"
-        description="历史 JSON 为必填项，内容会写入 holly/history。支持上传多个 JSON 文件，系统会自动合并。"
+        description="历史 JSON 为可选项，内容会写入 holly/history。支持上传多个 JSON 文件，系统会自动合并。"
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
       />
 
-      <div
-        onDragEnter={(e) => {
+      <div style={{ marginBottom: 16 }}>
+        <Radio.Group 
+          value={historySource} 
+          onChange={e => {
+            setHistorySource(e.target.value);
+            // 清理互斥字段
+            if (e.target.value === 'server') {
+               clearHistory();
+            } else {
+               form.setFieldValue('serverHistoryFile', undefined);
+            }
+          }}
+          buttonStyle="solid"
+        >
+          <Radio.Button value="local"><UploadOutlined /> 本地上传</Radio.Button>
+          <Radio.Button value="server"><CloudServerOutlined /> 服务器文件</Radio.Button>
+        </Radio.Group>
+      </div>
+
+      {historySource === 'server' ? (
+        <>
+        <Form.Item label="历史数据目录（绝对路径或相对于 holly 根目录）" name="serverHistoryDir" style={{ marginBottom: 12 }}>
+            <Input 
+                placeholder="例如: /data/history 或 history/tpcds" 
+            />
+        </Form.Item>
+        <Form.Item 
+          name="serverHistoryFile" 
+          label="选择服务器上的历史文件" 
+          help="文件列表来自指定目录"
+        >
+          <Select 
+            placeholder="请选择文件" 
+            loading={loadingServerFiles}
+            options={serverHistoryFiles.map(f => ({ label: f, value: f }))}
+            allowClear
+            showSearch
+          />
+        </Form.Item>
+        </>
+      ) : (
+        <>
+          <div
+            onDragEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setDragActive(true);
@@ -195,7 +278,7 @@ const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
           <InboxOutlined />
         </div>
         <Typography.Title level={4} style={{ marginBottom: 4 }}>
-          拖拽或点击上传 history_json
+          拖拽或点击上传 history_json (可选)
         </Typography.Title>
         <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
           可一次选择多个 JSON 文件，系统将自动解析并合并
@@ -245,6 +328,10 @@ const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
           </Card>
         </>
       )}
+      </>
+      )}
+
+      <Divider />
 
       <Alert
         showIcon
@@ -254,28 +341,74 @@ const EvaluatorScriptStep: React.FC<HistoryUploadStepProps> = ({ form }) => {
         style={{ marginTop: 24, marginBottom: 16 }}
       />
 
-      <Form.Item label="数据文件（可选）" style={{ marginBottom: 12 }}>
-        <Upload.Dragger
-          name="data"
-          beforeUpload={handleDataUpload}
-          showUploadList={false}
-          accept=".json,.txt,.sql,.csv,.yaml,.yml"
+      <div style={{ marginBottom: 16 }}>
+        <Radio.Group 
+          value={dataSource} 
+          onChange={e => {
+            setDataSource(e.target.value);
+            if (e.target.value === 'server') {
+              form.setFieldsValue({
+                dataFileContent: undefined,
+                dataFileName: undefined
+              });
+            } else {
+              form.setFieldValue('serverDataFile', undefined);
+            }
+          }}
+          buttonStyle="solid"
         >
-          <p className="ant-upload-drag-icon">
-            <InboxOutlined />
-          </p>
-          <p className="ant-upload-text">拖拽或点击上传数据文件</p>
-          <p className="ant-upload-hint">内容将以文本形式存储，可用于 mock/data</p>
-        </Upload.Dragger>
-      </Form.Item>
+          <Radio.Button value="local"><UploadOutlined /> 本地上传</Radio.Button>
+          <Radio.Button value="server"><CloudServerOutlined /> 服务器文件</Radio.Button>
+        </Radio.Group>
+      </div>
 
-      <Form.Item name="dataFileContent" label="数据文件内容">
-        <Input.TextArea
-          rows={6}
-          placeholder="可选：直接在此粘贴数据文件内容"
-          style={{ fontFamily: 'monospace' }}
-        />
-      </Form.Item>
+      {dataSource === 'server' ? (
+        <>
+        <Form.Item label="数据文件目录（绝对路径或相对于 holly 根目录）" name="serverDataDir" style={{ marginBottom: 12 }}>
+            <Input 
+                placeholder="例如: /data/raw 或 data/raw" 
+            />
+        </Form.Item>
+        <Form.Item 
+          name="serverDataFile" 
+          label="选择服务器上的数据文件" 
+          help="文件列表来自指定目录"
+        >
+          <Select 
+            placeholder="请选择文件" 
+            loading={loadingServerFiles}
+            options={serverDataFiles.map(f => ({ label: f, value: f }))}
+            allowClear
+            showSearch
+          />
+        </Form.Item>
+        </>
+      ) : (
+        <>
+          <Form.Item label="数据文件（可选）" style={{ marginBottom: 12 }}>
+            <Upload.Dragger
+              name="data"
+              beforeUpload={handleDataUpload}
+              showUploadList={false}
+              accept=".json,.txt,.sql,.csv,.yaml,.yml"
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">拖拽或点击上传数据文件</p>
+              <p className="ant-upload-hint">内容将以文本形式存储，可用于 mock/data</p>
+            </Upload.Dragger>
+          </Form.Item>
+
+          <Form.Item name="dataFileContent" label="数据文件内容">
+            <Input.TextArea
+              rows={6}
+              placeholder="可选：直接在此粘贴数据文件内容"
+              style={{ fontFamily: 'monospace' }}
+            />
+          </Form.Item>
+        </>
+      )}
 
       <Form.Item name="dataFileName" hidden>
         <Input />

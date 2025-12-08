@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -58,6 +59,20 @@ export class TaskController {
     await this.taskService.startTask(taskId);
   }
 
+  @Get('server-files')
+  @ApiOperation({ summary: '获取服务端可用文件列表' })
+  @ApiResponse({
+    status: 200,
+    description: '返回文件列表',
+    type: [String],
+  })
+  async listServerFiles(
+      @Query('type') type: 'history' | 'data',
+      @Query('path') customPath?: string
+  ): Promise<string[]> {
+    return this.taskService.listServerFiles(type, customPath);
+  }
+
   @Get('list')
   @ApiOperation({ summary: '获取所有任务列表' })
   @ApiResponse({
@@ -67,6 +82,17 @@ export class TaskController {
   })
   async listTasks(): Promise<Task[]> {
     return this.taskService.listTasks();
+  }
+
+  @Get(':taskId')
+  @ApiOperation({ summary: '获取任务详情' })
+  @ApiParam({ name: 'taskId', description: '任务ID' })
+  @ApiResponse({
+    status: 200,
+    description: '返回任务详情',
+  })
+  async getTaskDetail(@Param('taskId') taskId: string): Promise<any> {
+    return this.taskService.getTaskDetail(taskId);
   }
 
   @Get(':taskId/status')

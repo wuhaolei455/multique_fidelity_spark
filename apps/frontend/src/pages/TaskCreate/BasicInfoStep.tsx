@@ -149,8 +149,37 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ form }) => {
       <Divider orientation="left">迁移学习与热启动</Divider>
       <Row gutter={16}>
         <Col span={6}>
+          <Form.Item name="tlStrategy" label="迁移学习策略">
+            <Select
+              placeholder="选择策略"
+              options={[
+                { label: '无', value: 'none' },
+                { label: 'MCE', value: 'mce' },
+                { label: 'RE', value: 're' },
+                { label: 'TOPO', value: 'topo' },
+              ]}
+            />
+          </Form.Item>
+        </Col>
+        <Col span={6}>
           <Form.Item name="tlTopk" label="迁移学习 TopK">
             <InputNumber min={0} {...numberProps} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Row gutter={16}>
+        <Col span={6}>
+          <Form.Item name="wsStrategy" label="WS 策略">
+            <Select
+              placeholder="选择策略"
+              options={[
+                { label: '无', value: 'none' },
+                { label: 'Best ROVER', value: 'best_rover' },
+                { label: 'Best All', value: 'best_all' },
+                { label: 'Top3 ROVER', value: 'top3_rover' },
+                { label: 'Top3 All', value: 'top3_all' },
+              ]}
+            />
           </Form.Item>
         </Col>
         <Col span={6}>

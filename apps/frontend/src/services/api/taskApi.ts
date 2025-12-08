@@ -1,4 +1,5 @@
 import request from '../request';
+import { toTaskSummary } from '@/types/task';
 import type {
   TaskResult,
   Observation,
@@ -12,7 +13,6 @@ import type {
   TaskCreateRequest,
   Config,
 } from '@/types';
-import { toTaskSummary } from '@/types';
 
 export interface LaunchFrameworkPayload {
   name: string;
@@ -34,7 +34,9 @@ export interface LaunchFrameworkPayload {
   wsInitNum?: number;
   wsTopk?: number;
   wsInnerSurrogateModel?: string;
+  wsStrategy?: string;
   tlTopk?: number;
+  tlStrategy?: string;
   compress?: string;
   cpStrategy?: string;
   cpTopk?: number;
@@ -45,16 +47,27 @@ export interface LaunchFrameworkPayload {
   configSpacePath?: string;
   expertSpacePath?: string;
   historyFileName?: string;
-  historyFileContent: string;
+  historyFileContent?: string;
+  serverHistoryFile?: string;
   dataFileName?: string;
   dataFileContent?: string;
+  serverDataFile?: string;
   hugeSpaceFileContent?: string;
 }
+
+// 获取服务端文件列表
+export const getServerFiles = (type: 'history' | 'data', path?: string): Promise<string[]> => {
+  return request({
+    url: '/tasks/server-files',
+    method: 'GET',
+    params: { type, path },
+  });
+};
 
 // 获取任务列表（完整数据，包含 meta_info 和 observations）
 export const getTasks = (): Promise<TaskListResponse> => {
   return request({
-    url: '/results/list',
+    url: '/tasks/list',
     method: 'GET',
   })
     .then((response) => {
@@ -85,7 +98,7 @@ export const getTasks = (): Promise<TaskListResponse> => {
 // 获取任务详情（完整结果数据）
 export const getTaskDetail = (taskId: string): Promise<TaskResult> => {
   return request({
-    url: `/results/${taskId}`,
+    url: `/tasks/${taskId}`,
     method: 'GET',
   })
     .then((response) => {
@@ -101,57 +114,6 @@ export const getTaskDetail = (taskId: string): Promise<TaskResult> => {
       }
       throw error;
     });
-};
-
-// 创建任务（旧接口，已废弃）
-export const createTask = (data: TaskCreateRequest): Promise<{ taskId: string; createdAt: string; status: string }> => {
-  return request({
-    url: '/results/create',
-    method: 'POST',
-    data: {
-      name: data.config.name,
-      description: data.config.description,
-      method: data.config.method,
-      configSpace: data.config.config_space,
-      iterNum: data.config.iter_num,
-      initNum: data.config.init_num,
-      warmStartStrategy: data.config.warm_start_strategy,
-      transferLearningStrategy: data.config.transfer_learning_strategy,
-      compressionStrategy: data.config.compression_strategy,
-      schedulerParams: data.config.scheduler_params,
-      environment: data.config.environment,
-    },
-  });
-};
-
-// 创建任务（新接口，支持上传脚本）
-export const createTaskWithScript = (data: {
-  name: string;
-  description?: string;
-  configSpace: string;
-  evaluatorScript: string;
-  configSpaceFileName?: string;
-  scriptFileName?: string;
-}): Promise<{
-  taskId: string;
-  createdAt: string;
-  status: string;
-  configSpacePath: string;
-  scriptPath: string;
-  processId?: number;
-}> => {
-  return request({
-    url: '/tasks/create',
-    method: 'POST',
-    data: {
-      name: data.name,
-      description: data.description,
-      configSpace: data.configSpace,
-      evaluatorScript: data.evaluatorScript,
-      configSpaceFileName: data.configSpaceFileName,
-      scriptFileName: data.scriptFileName,
-    },
-  });
 };
 
 export const createFrameworkTask = (data: LaunchFrameworkPayload) => {
@@ -178,62 +140,47 @@ export const startTask = (taskId: string) => {
   });
 };
 
-// 更新任务（后端不支持，返回提示）
-export const updateTask = (
-  _taskId: string,
-  _data: { action: string }
-): Promise<{ success: boolean }> => {
-  console.warn('后端不支持更新任务接口');
-  return Promise.reject(new Error('后端不支持更新任务接口'));
-};
-
-// 删除任务（后端不支持，返回提示）
-export const deleteTask = (_taskId: string): Promise<{ success: boolean }> => {
-  console.warn('后端不支持删除任务接口');
-  return Promise.reject(new Error('后端不支持删除任务接口'));
-};
-
-// 复制任务（后端不支持，返回提示）
-export const cloneTask = (_taskId: string): Promise<{ taskId: string }> => {
-  console.warn('后端不支持复制任务接口');
-  return Promise.reject(new Error('后端不支持复制任务接口'));
-};
-
 // 获取观察记录列表（对应后端的 observations 接口）
+// TODO: 该接口在后端已被删除，需要确认前端是否真的需要，如果需要则需在 TaskController 中重新实现
 export const getTaskHistory = (
   taskId: string,
   query: { page?: number; pageSize?: number }
 ): Promise<{ observations: Observation[]; total: number }> => {
-  return request({
-    url: `/results/${taskId}/observations`,
-    method: 'GET',
-    params: query,
-  }).then((response) => {
-    // 响应拦截器已经返回了 response.data，所以这里直接使用 response
-    return response as unknown as { observations: Observation[]; total: number };
+  // 临时：直接获取任务详情，然后前端分页
+  return getTaskDetail(taskId).then(result => {
+      const observations = result.observations || [];
+      const page = query.page || 1;
+      const pageSize = query.pageSize || 10;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+      return {
+          observations: observations.slice(start, end),
+          total: observations.length
+      };
   });
 };
 
 // 获取任务状态摘要（对应后端的 summary 接口）
 export const getTaskStatus = (taskId: string): Promise<TaskStatusSummary> => {
-  return request({
-    url: `/results/${taskId}/summary`,
-    method: 'GET',
-  });
+    // 临时：从详情中提取
+    return getTaskDetail(taskId).then(result => ({
+        taskId: result.taskId,
+        status: 'completed' as const, // 假设
+        currentIteration: result.observationCount,
+        totalIterations: result.observationCount,
+        bestObjective: result.bestConfig?.bestObjective || 0,
+        numEvaluated: result.observationCount
+    }));
 };
 
 // 获取任务最佳配置
 export const getBestConfig = (taskId: string): Promise<BestConfigResponse> => {
-  return request({
-    url: `/results/${taskId}/best-config`,
-    method: 'GET',
-  });
-};
-
-// 获取相似任务（后端不支持，返回空数组）
-export const getSimilarTasks = (_taskId: string): Promise<{ tasks: SimilarTask[] }> => {
-  console.warn('后端不支持相似任务接口');
-  return Promise.resolve({ tasks: [] });
+    // 临时：从详情中提取
+    return getTaskDetail(taskId).then(result => ({
+        config: result.bestConfig?.config || {},
+        objective: result.bestConfig?.bestObjective || 0,
+        iteration: 0 // 暂时未知
+    }));
 };
 
 // 获取任务结果数据（使用完整结果接口）
@@ -256,10 +203,25 @@ export const getTaskTrend = (taskId: string): Promise<{
   bestObjective: number;
   averageObjective: number;
 }> => {
-  return request({
-    url: `/results/${taskId}/trend`,
-    method: 'GET',
-  });
+    // 临时：从详情中计算
+    return getTaskDetail(taskId).then(result => {
+        let best = Infinity;
+        const data = (result.observations || []).map((obs, idx) => {
+            best = Math.min(best, obs.objectives[0]);
+            return {
+                iteration: idx,
+                objective: obs.objectives[0],
+                bestObjective: best,
+                elapsedTime: obs.elapsed_time
+            };
+        });
+        return {
+            data,
+            totalIterations: data.length,
+            bestObjective: best,
+            averageObjective: 0 // 略
+        };
+    });
 };
 
 interface ObservationResponse {
@@ -285,34 +247,40 @@ export const getTaskObservations = (
   taskId: string,
   params?: { page?: number; pageSize?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ObservationListResponse> => {
-  return request({
-    url: `/results/${taskId}/observations`,
-    method: 'GET',
-    params: {
-      page: 1,
-      pageSize: 1000,
-      ...(params || {}),
-    },
-  });
+    return getTaskDetail(taskId).then(result => {
+        // 简单实现，暂不支持排序
+        const observations = result.observations || [];
+        const page = params?.page || 1;
+        const pageSize = params?.pageSize || 10;
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize;
+        const items = observations.slice(start, end).map((obs, idx) => ({
+            index: start + idx,
+            config: obs.config,
+            objectives: obs.objectives,
+            constraints: obs.constraints,
+            trialState: obs.trial_state,
+            elapsedTime: obs.elapsed_time,
+            createTime: obs.create_time,
+            extraInfo: obs.extra_info
+        }));
+        
+        return {
+            items,
+            total: observations.length,
+            page,
+            pageSize,
+            totalPages: Math.ceil(observations.length / pageSize)
+        };
+    });
 };
 
 // 获取参数重要性
 export const getParameterImportance = (taskId: string): Promise<{
   parameters: ParameterImportance[];
 }> => {
-  return request({
-    url: `/results/${taskId}/parameter-importance`,
-    method: 'GET',
-  });
-};
-
-// 对比多个任务
-export const compareTasks = (taskIds: string[]): Promise<TaskComparisonResponse> => {
-  return request({
-    url: '/results/compare',
-    method: 'POST',
-    data: { taskIds },
-  });
+  // 暂未实现
+  return Promise.resolve({ parameters: [] });
 };
 
 /**

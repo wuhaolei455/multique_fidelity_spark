@@ -31,7 +31,9 @@ const DEFAULT_FORM_VALUES = {
   wsInitNum: 4,
   wsTopk: 4,
   wsInnerSurrogateModel: 'prf',
+  wsStrategy: 'none',
   tlTopk: 3,
+  tlStrategy: 'none',
   schedulerR: 27,
   schedulerEta: 3,
 };
@@ -43,9 +45,22 @@ const TaskCreate: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    form.setFieldsValue(DEFAULT_FORM_VALUES);
-  }, [form]);
+  const TASK_FORM_CACHE_KEY = 'task_create_form_cache';
+
+  const [initialValues] = useState(() => {
+    try {
+      const cachedData = localStorage.getItem(TASK_FORM_CACHE_KEY);
+      if (cachedData) {
+        return {
+          ...DEFAULT_FORM_VALUES,
+          ...JSON.parse(cachedData),
+        };
+      }
+    } catch (error) {
+      console.error('Failed to load cached form data', error);
+    }
+    return DEFAULT_FORM_VALUES;
+  });
 
   const stepTitles = [
     { title: '基本信息' },
@@ -73,6 +88,9 @@ const TaskCreate: React.FC = () => {
       'wsInitNum',
       'wsTopk',
       'wsInnerSurrogateModel',
+      'wsStrategy',
+      'tlTopk',
+      'tlStrategy',
       'schedulerR',
       'schedulerEta',
     ],
@@ -128,15 +146,24 @@ const TaskCreate: React.FC = () => {
       await form.validateFields();
       const values = form.getFieldsValue();
 
+      // 缓存表单数据
+      try {
+        localStorage.setItem(TASK_FORM_CACHE_KEY, JSON.stringify(values));
+      } catch (error) {
+        console.warn('Failed to cache form data', error);
+      }
+
       if (!values.configSpaceContent) {
         message.error('请上传配置空间 JSON');
         return;
       }
 
-      if (!values.historyFileContent) {
-        message.error('请上传历史 JSON');
-        return;
-      }
+      const joinPath = (dir?: string, file?: string) => {
+          if (!file) return undefined;
+          if (!dir) return file;
+          // 简单的路径拼接，如果在 Windows 上可能有问题，但这里假设是 Linux 路径分隔符
+          return dir.endsWith('/') ? `${dir}${file}` : `${dir}/${file}`;
+      };
 
       const payload: LaunchFrameworkPayload = {
         name: values.name,
@@ -159,13 +186,17 @@ const TaskCreate: React.FC = () => {
         wsInitNum: values.wsInitNum,
         wsTopk: values.wsTopk,
         wsInnerSurrogateModel: values.wsInnerSurrogateModel,
+        wsStrategy: values.wsStrategy,
         tlTopk: values.tlTopk,
+        tlStrategy: values.tlStrategy,
         schedulerR: values.schedulerR,
         schedulerEta: values.schedulerEta,
         historyFileName: values.historyFileName || undefined,
         historyFileContent: values.historyFileContent,
+        serverHistoryFile: joinPath(values.serverHistoryDir, values.serverHistoryFile),
         dataFileName: values.dataFileName || undefined,
         dataFileContent: values.dataFileContent || undefined,
+        serverDataFile: joinPath(values.serverDataDir, values.serverDataFile),
         configSpacePath: undefined,
         hugeSpaceFileContent: values.configSpaceContent,
       };
@@ -197,7 +228,7 @@ const TaskCreate: React.FC = () => {
   return (
     <div className="task-create-page">
       <Card>
-        <Form form={form} layout="vertical" initialValues={DEFAULT_FORM_VALUES}>
+        <Form form={form} layout="vertical" initialValues={initialValues}>
           <Steps current={currentStep} items={stepTitles} />
           <div className="steps-content">{renderStepContent()}</div>
           <div className="steps-action">

@@ -65,38 +65,6 @@ export const fetchTaskDetail = createAsyncThunk(
   }
 );
 
-export const createTask = createAsyncThunk(
-  'task/createTask',
-  async (data: TaskCreateRequest) => {
-    const response = await taskApi.createTask(data);
-    return response;
-  }
-);
-
-export const updateTaskStatus = createAsyncThunk(
-  'task/updateTaskStatus',
-  async ({ taskId, action }: { taskId: string; action: string }) => {
-    const response = await taskApi.updateTask(taskId, { action });
-    return response;
-  }
-);
-
-export const deleteTask = createAsyncThunk(
-  'task/deleteTask',
-  async (taskId: string) => {
-    await taskApi.deleteTask(taskId);
-    return taskId;
-  }
-);
-
-export const cloneTask = createAsyncThunk(
-  'task/cloneTask',
-  async (taskId: string) => {
-    const response = await taskApi.cloneTask(taskId);
-    return response;
-  }
-);
-
 // Slice
 const taskSlice = createSlice({
   name: 'task',
@@ -152,34 +120,6 @@ const taskSlice = createSlice({
       .addCase(fetchTaskDetail.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || '获取任务详情失败';
-      });
-
-    // 创建任务
-    builder
-      .addCase(createTask.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(createTask.fulfilled, (state) => {
-        state.loading = false;
-      })
-      .addCase(createTask.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || '创建任务失败';
-      });
-
-    // 删除任务
-    builder
-      .addCase(deleteTask.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(deleteTask.fulfilled, (state, action) => {
-        state.loading = false;
-        state.tasks = state.tasks.filter((task: Task) => task.id !== action.payload);
-      })
-      .addCase(deleteTask.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || '删除任务失败';
       });
   },
 });
