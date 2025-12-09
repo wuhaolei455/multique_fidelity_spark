@@ -7,7 +7,7 @@ import { Card, Steps, Button, message, Form } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { createFrameworkTask, startTask, LaunchFrameworkPayload } from '@/services/api/taskApi';
 import BasicInfoStep from './BasicInfoStep';
-import EvaluatorScriptStep from './EvaluatorScriptStep';
+import { EvaluatorScriptStep } from './EvaluatorScriptStep';
 import ConfigSpaceStep from './ConfigSpaceStep';
 import PreviewStep from './PreviewStep';
 import './index.less';
@@ -158,13 +158,6 @@ const TaskCreate: React.FC = () => {
         return;
       }
 
-      const joinPath = (dir?: string, file?: string) => {
-          if (!file) return undefined;
-          if (!dir) return file;
-          // 简单的路径拼接，如果在 Windows 上可能有问题，但这里假设是 Linux 路径分隔符
-          return dir.endsWith('/') ? `${dir}${file}` : `${dir}/${file}`;
-      };
-
       const payload: LaunchFrameworkPayload = {
         name: values.name,
         description: values.description || '',
@@ -193,10 +186,10 @@ const TaskCreate: React.FC = () => {
         schedulerEta: values.schedulerEta,
         historyFileName: values.historyFileName || undefined,
         historyFileContent: values.historyFileContent,
-        serverHistoryFile: joinPath(values.serverHistoryDir, values.serverHistoryFile),
+        serverHistoryDir: values.serverHistoryDir,
         dataFileName: values.dataFileName || undefined,
         dataFileContent: values.dataFileContent || undefined,
-        serverDataFile: joinPath(values.serverDataDir, values.serverDataFile),
+        serverDataDir: values.serverDataDir,
         configSpacePath: undefined,
         hugeSpaceFileContent: values.configSpaceContent,
       };

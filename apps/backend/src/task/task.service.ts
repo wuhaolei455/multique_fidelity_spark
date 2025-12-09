@@ -85,12 +85,10 @@ export class TaskService {
         JSON.parse(createTaskDto.configSpace);
       } catch (error) {
         this.logger.error(`Invalid JSON for configSpace. Type: ${typeof createTaskDto.configSpace}, Content Preview: ${createTaskDto.configSpace?.slice(0, 100)}`);
-        // 尝试再次修复，因为可能前端的修复在传输过程中失效（虽然不应该）
-        // 或者是一个已经是 Object 的情况
+        // fix invalid json
         if (typeof createTaskDto.configSpace === 'object') {
            createTaskDto.configSpace = JSON.stringify(createTaskDto.configSpace);
         } else {
-             // 再次尝试处理 Python 特有的非标准 JSON 值
             try {
                 const fixed = createTaskDto.configSpace.replace(
                     /"(?:\\.|[^"\\])*"|(-?Infinity)|(NaN)/g,
@@ -100,7 +98,6 @@ export class TaskService {
                     }
                 );
                 JSON.parse(fixed);
-                // 如果修复成功，更新它
                 createTaskDto.configSpace = fixed;
             } catch (e) {
                  throw new BadRequestException('配置空间必须是有效的 JSON 格式');
@@ -136,7 +133,7 @@ export class TaskService {
       fs.writeFileSync(taskMetaPath, JSON.stringify(task, null, 2), 'utf-8');
       this.logger.log(`Task metadata saved to: ${taskMetaPath}`);
 
-      // 4. 启动 start.sh
+      // 4. 启动 start_framework.sh
       const processId = await this.startTask(taskId);
 
       // 5. 更新任务状态
@@ -174,18 +171,30 @@ export class TaskService {
 
     try {
       const resolvedPaths = this.resolveFrameworkPaths(launchDto);
-
+      const historyDirForConfig = this.resolveCustomDir(
+        launchDto.serverHistoryDir,
+        resolvedPaths.historyDir,
+      );
+      const dataDirForConfig = this.resolveCustomDir(
+        launchDto.serverDataDir,
+        resolvedPaths.dataDir,
+      );
+      const configPaths: FrameworkResolvedPaths = {
+        ...resolvedPaths,
+        historyDir: historyDirForConfig,
+        dataDir: dataDirForConfig,
+      };
       let historyFilePath: string | undefined;
 
       if (launchDto.historyFileContent) {
         historyFilePath =
           this.writeUploadedFile({
-            baseDir: resolvedPaths.historyDir,
+            baseDir: historyDirForConfig,
             defaultName: `${taskId}_history.json`,
             fileName: launchDto.historyFileName,
             content: launchDto.historyFileContent,
             validateJson: true,
-          }) || path.join(resolvedPaths.historyDir, `${taskId}_history.json`);
+          }) || path.join(historyDirForConfig, `${taskId}_history.json`);
       } else if (launchDto.serverHistoryFile) {
          let sourcePath = launchDto.serverHistoryFile;
          if (!path.isAbsolute(sourcePath)) {
@@ -204,8 +213,8 @@ export class TaskService {
          if (!fs.existsSync(sourcePath)) {
             throw new NotFoundException(`服务端历史文件不存在: ${launchDto.serverHistoryFile}`);
          }
-         const targetPath = path.join(resolvedPaths.historyDir, `${taskId}_history.json`);
-         this.ensureDir(resolvedPaths.historyDir);
+         const targetPath = path.join(historyDirForConfig, `${taskId}_history.json`);
+         this.ensureDir(historyDirForConfig);
          fs.copyFileSync(sourcePath, targetPath);
          historyFilePath = targetPath;
          this.logger.log(`Copied server history file from ${sourcePath} to ${targetPath}`);
@@ -215,7 +224,7 @@ export class TaskService {
 
       if (launchDto.dataFileContent) {
         dataFilePath = this.writeUploadedFile({
-          baseDir: resolvedPaths.dataDir,
+          baseDir: dataDirForConfig,
           defaultName: `${taskId}_data.json`,
           fileName: launchDto.dataFileName,
           content: launchDto.dataFileContent,
@@ -238,11 +247,17 @@ export class TaskService {
          if (!fs.existsSync(sourcePath)) {
             throw new NotFoundException(`服务端数据文件不存在: ${launchDto.serverDataFile}`);
          }
-         const targetPath = path.join(resolvedPaths.dataDir, `${taskId}_data.json`);
-         this.ensureDir(resolvedPaths.dataDir);
+         const ext = path.extname(sourcePath);
+         const targetPath = path.join(dataDirForConfig, `${taskId}_data${ext}`);
+         this.ensureDir(dataDirForConfig);
          fs.copyFileSync(sourcePath, targetPath);
          dataFilePath = targetPath;
          this.logger.log(`Copied server data file from ${sourcePath} to ${targetPath}`);
+      }
+
+      if (!historyFilePath) {
+        historyFilePath = path.join(historyDirForConfig, `${taskId}_history.json`);
+        this.ensureDir(historyDirForConfig);
       }
 
       // Handle huge_space.json upload if provided
@@ -259,7 +274,12 @@ export class TaskService {
         });
       }
 
-      const configFilePath = this.generateFrameworkConfig(taskId, launchDto, resolvedPaths, hugeSpacePath);
+      const configFilePath = this.generateFrameworkConfig(
+        taskId,
+        launchDto,
+        configPaths,
+        hugeSpacePath,
+      );
 
       const task: Task = {
         id: taskId,
@@ -278,7 +298,7 @@ export class TaskService {
       const envOverrides = this.buildFrameworkEnv(
         launchDto,
         configFilePath,
-        resolvedPaths,
+        configPaths,
         historyFilePath,
         dataFilePath,
       );
@@ -379,6 +399,40 @@ export class TaskService {
         const stderrPath = path.join(logDir, 'stderr.log');
         const stdoutStream = fs.createWriteStream(stdoutPath, { flags: 'a' });
         const stderrStream = fs.createWriteStream(stderrPath, { flags: 'a' });
+
+        // 将脚本入参与关键环境变量推送到日志
+        const relevantEnvKeys = [
+          'CONFIG_PATH',
+          'ITER_NUM',
+          'HISTORY_DIR',
+          'SAVE_DIR',
+          'COMPRESS',
+          'CP_TOPK',
+          'OPT',
+          'LOG_LEVEL',
+          'TEST_MODE',
+          'SKIP_VENV',
+          'JAVA_HOME',
+        ];
+        const envSummary = relevantEnvKeys
+          .map((key) => `${key}=${env[key] ?? ''}`)
+          .join('\n');
+        const scriptParamsLog = [
+          '==== start_framework.sh 入参 ====', //
+          `ARGV: bash ${startScriptPath} ${taskName}`,
+          'ENV:',
+          envSummary,
+          '==== 结束 ====\n',
+        ].join('\n');
+        stdoutStream.write(scriptParamsLog);
+        if (this.taskGateway.hasSubscribers(taskId)) {
+          this.taskGateway.emitTaskLog({
+            taskId,
+            type: 'stdout',
+            content: scriptParamsLog,
+            timestamp: new Date().toISOString(),
+          });
+        }
 
         // 实时读取并推送 stdout
         const stdoutReader = readline.createInterface({
@@ -632,6 +686,17 @@ export class TaskService {
     return absolute;
   }
 
+  private resolveCustomDir(customDir: string | undefined, fallbackDir: string): string {
+    if (!customDir || !customDir.trim()) {
+      this.ensureDir(fallbackDir);
+      return fallbackDir;
+    }
+    const trimmed = customDir.trim();
+    const absolute = path.isAbsolute(trimmed) ? trimmed : path.resolve(this.hollyRoot, trimmed);
+    this.ensureDir(absolute);
+    return absolute;
+  }
+
   private writeUploadedFile(options: {
     baseDir: string;
     defaultName: string;
@@ -774,10 +839,6 @@ export class TaskService {
       // If huge_space.json was uploaded, use its absolute path
       baseConfig.config_spaces.config_space = hugeSpacePath;
     } else if (dto.configSpacePath) {
-      // If user provides a path, ensure it's relative to framework root if it's within the project
-      // Or just pass as is if it's absolute. But here we assume we might need to handle it.
-      // For now, let's assume dto.configSpacePath is what they want.
-      // But typically, we might want to use the standard config space dir.
       baseConfig.config_spaces.config_space = dto.configSpacePath; 
     }
 

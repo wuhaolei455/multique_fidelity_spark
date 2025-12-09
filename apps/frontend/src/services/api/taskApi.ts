@@ -48,10 +48,10 @@ export interface LaunchFrameworkPayload {
   expertSpacePath?: string;
   historyFileName?: string;
   historyFileContent?: string;
-  serverHistoryFile?: string;
+  serverHistoryDir?: string;
   dataFileName?: string;
   dataFileContent?: string;
-  serverDataFile?: string;
+  serverDataDir?: string;
   hugeSpaceFileContent?: string;
 }
 

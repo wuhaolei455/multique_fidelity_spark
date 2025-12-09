@@ -4,7 +4,6 @@ import {
   Get,
   Body,
   Param,
-  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -35,18 +34,6 @@ export class TaskController {
     return this.taskService.launchFrameworkTask(launchDto);
   }
 
-  @Post('launch-framework')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '启动框架任务 (别名)' })
-  @ApiResponse({
-    status: 201,
-    description: '任务创建成功',
-    type: CreateTaskResponseDto,
-  })
-  async launchFramework(@Body() launchDto: LaunchFrameworkTaskDto): Promise<CreateTaskResponseDto> {
-    return this.taskService.launchFrameworkTask(launchDto);
-  }
-
   @Post(':taskId/start')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '启动已创建的任务' })
@@ -57,20 +44,6 @@ export class TaskController {
   })
   async startTask(@Param('taskId') taskId: string): Promise<void> {
     await this.taskService.startTask(taskId);
-  }
-
-  @Get('server-files')
-  @ApiOperation({ summary: '获取服务端可用文件列表' })
-  @ApiResponse({
-    status: 200,
-    description: '返回文件列表',
-    type: [String],
-  })
-  async listServerFiles(
-      @Query('type') type: 'history' | 'data',
-      @Query('path') customPath?: string
-  ): Promise<string[]> {
-    return this.taskService.listServerFiles(type, customPath);
   }
 
   @Get('list')

@@ -246,11 +246,21 @@ export class LaunchFrameworkTaskDto {
   @IsOptional()
   @IsString()
   serverHistoryFile?: string;
+  
+  @ApiPropertyOptional({ description: '服务器历史目录（绝对路径或相对于 holly 根目录）' })
+  @IsOptional()
+  @IsString()
+  serverHistoryDir?: string;
 
   @ApiPropertyOptional({ description: '服务端数据文件路径（相对于 holly/data）' })
   @IsOptional()
   @IsString()
   serverDataFile?: string;
+  
+  @ApiPropertyOptional({ description: '服务器数据目录（绝对路径或相对于 holly 根目录）' })
+  @IsOptional()
+  @IsString()
+  serverDataDir?: string;
 
   @ApiPropertyOptional({ description: '历史 JSON 文件名' })
   @IsOptional()
